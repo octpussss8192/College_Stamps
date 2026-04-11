@@ -9,6 +9,7 @@ export default function ScanPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [registering, setRegistering] = useState(false);
   
   const [parsedData, setParsedData] = useState<any>(null); // Draft data from OCR
@@ -41,7 +42,17 @@ export default function ScanPage() {
     if (!file) return;
 
     setLoading(true);
+    setProgress(0);
     setError(null);
+
+    // Simulate progress behavior
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        // Increment up to 90%. API response will jump it to 100%
+        if (prev >= 90) return 90;
+        return prev + Math.floor(Math.random() * 10) + 5;
+      });
+    }, 500);
 
     const formData = new FormData();
     formData.append("image", file);
@@ -53,6 +64,11 @@ export default function ScanPage() {
       });
 
       const data = await response.json();
+      clearInterval(progressInterval);
+      setProgress(100);
+      
+      // Add a slight delay for user to see 100% before transitioning
+      await new Promise(res => setTimeout(res, 300));
       
       if (!response.ok) {
         throw new Error(data.error || "スキャン処理に失敗しました。");
@@ -60,8 +76,11 @@ export default function ScanPage() {
 
       setParsedData(data.data);
     } catch (err: any) {
+      clearInterval(progressInterval);
+      setProgress(0);
       setError(err.message);
     } finally {
+      clearInterval(progressInterval);
       setLoading(false);
     }
   };
@@ -131,22 +150,40 @@ export default function ScanPage() {
 
         {/* Action Button 1: Analyze */}
         {previewUrl && !parsedData && !result && (
-          <div className="flex gap-3">
-            <button 
-              onClick={resetSelection}
-              disabled={loading}
-              className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold flex items-center justify-center gap-2 hover:bg-slate-50 transition"
-            >
-              <RefreshCcw size={18} /> 撮り直す
-            </button>
-            <button 
-              onClick={handleScan}
-              disabled={loading}
-              className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 transition shadow-lg shadow-indigo-500/30"
-            >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
-              {loading ? "解析中..." : "解析する"}
-            </button>
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <button 
+                onClick={resetSelection}
+                disabled={loading}
+                className="flex-1 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold flex items-center justify-center gap-2 hover:bg-slate-50 transition disabled:opacity-50"
+              >
+                <RefreshCcw size={18} /> 撮り直す
+              </button>
+              <button 
+                onClick={handleScan}
+                disabled={loading}
+                className="flex-1 py-3 px-4 rounded-xl bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 transition shadow-lg shadow-indigo-500/30 disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
+                {loading ? "解析中..." : "解析する"}
+              </button>
+            </div>
+            
+            {/* Progress Bar UI */}
+            {loading && (
+              <div className="w-full mt-2 flex flex-col gap-1 animate-in fade-in duration-300">
+                <div className="flex justify-between text-xs text-slate-500 font-bold px-1">
+                  <span>画像を解析しています...</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-indigo-600 h-full transition-all duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
