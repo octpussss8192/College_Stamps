@@ -1,9 +1,18 @@
 "use client"
 import { Award, User, Info, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
-  const currentStamps = 12;
+  const [currentStamps, setCurrentStamps] = useState(0);
   const maxStamps = 20;
+
+  useEffect(() => {
+    // コンポーネントマウント時にlocalStorageから取得
+    const savedStamps = localStorage.getItem('user_stamps');
+    if (savedStamps) {
+      setCurrentStamps(Number(savedStamps));
+    }
+  }, []);
   
   // Render dummy stamps
   const stamps = Array.from({ length: maxStamps }).map((_, i) => (
@@ -42,7 +51,9 @@ export default function Home() {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-400">あと8個で特典GET!</p>
+              <p className="text-xs text-slate-400">
+                {currentStamps >= maxStamps ? '特典と交換できます！' : `あと${maxStamps - currentStamps}個で特典GET!`}
+              </p>
             </div>
           </div>
 

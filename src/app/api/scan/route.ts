@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWorker } from "tesseract.js";
 
 // ユーザーから提供されたAPIキー
 const GOOGLE_VISION_API_KEY = "AIzaSyA07pFgh_i_jZIAngMtHLw4dZyON2RoNsA";
@@ -39,20 +38,22 @@ export async function POST(req: NextRequest) {
 
       const visionData = await response.json();
       
+      // Google API側でエラーが返ってきているかをチェック
+      if (visionData.error) {
+        console.error("Google Vision API Error:", visionData.error);
+        throw new Error(visionData.error.message || "Vision API Keyが無効、またはAPIが有効化されていません。");
+      }
+      
       if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
         text = visionData.responses[0].fullTextAnnotation.text;
       } else {
-        throw new Error("Cloud Vision API could not detect text or returned an error.");
+        console.warn("Vision API returned empty result:", visionData);
+        // 画像に文字が含まれていない場合などは空文字のまま進める
+        text = "";
       }
-    } catch (visionError) {
-      // -------------------------------------------------------------
-      // Fallback: Use Tesseract.js (SLOW)
-      // -------------------------------------------------------------
-      console.log("Failed to use Google Vision API, falling back to Tesseract...", visionError);
-      const worker = await createWorker('jpn');
-      const { data } = await worker.recognize(buffer);
-      text = data.text;
-      await worker.terminate();
+    } catch (visionError: any) {
+      console.error("Vision API Request Failed:", visionError);
+      return NextResponse.json({ error: `APIエラー: ${visionError.message}` }, { status: 500 });
     }
 
     console.log("Extracted Text:", text);
