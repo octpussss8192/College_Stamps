@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3b82f6; /* Blue 500 */
+  --color-primary-dark: #1d4ed8;
+  --color-accent: #10b981; /* Emerald 500 */
+  --color-background-start: #f8fafc;
+  --color-background-end: #e2e8f0;
+  
+  --font-inter: 'Inter', sans-serif;
+}
+
+@layer base {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    @apply antialiased bg-slate-50 text-slate-900;
+  }
+}
+
+@layer utilities {
+  .glassmorphism {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+  
+  .stamp-empty {
+    @apply w-12 h-12 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-100;
+  }
+  
+  .stamp-filled {
+    @apply w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg transform transition-transform hover:scale-110 border border-blue-400;
+  }
+}
+
+html,
+body {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
