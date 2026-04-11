@@ -35,6 +35,11 @@ export default function RootLayout({
         {/* Header decoration */}
         <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-b-[40px] -z-10" />
         
+        {/* Version Badge */}
+        <div className="absolute top-4 right-5 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30 text-[10px] font-bold text-white shadow-sm z-40">
+          v1.0.0 (Beta)
+        </div>
+        
         <main className="w-full h-full min-h-screen">
           {children}
         </main>
