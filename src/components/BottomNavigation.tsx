@@ -1,5 +1,5 @@
 "use client";
-import { Home, Camera, Gift, Clock } from 'lucide-react';
+import { Home, Camera, Gift, Clock, Utensils } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -8,6 +8,7 @@ export default function BottomNavigation() {
   
   const navItems = [
     { name: 'ホーム', href: '/', icon: Home },
+    { name: 'メニュー', href: '/menu', icon: Utensils },
     { name: 'スキャン', href: '/scan', icon: Camera },
     { name: '特典', href: '/rewards', icon: Gift },
     { name: '履歴', href: '/history', icon: Clock },

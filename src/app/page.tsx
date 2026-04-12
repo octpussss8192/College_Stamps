@@ -5,6 +5,10 @@ import { useState, useEffect } from 'react';
 export default function Home() {
   const [currentStamps, setCurrentStamps] = useState(0);
   const [nickname, setNickname] = useState('〇〇大学 学生');
+  const [userId, setUserId] = useState<number | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [todaySpecial, setTodaySpecial] = useState<{name: string, description: string} | null>(null);
   const maxStamps = 20;
 
   useEffect(() => {
@@ -18,6 +22,10 @@ export default function Home() {
             if (data.authenticated) {
               setCurrentStamps(data.user.stamps);
               setNickname(data.user.nickname);
+              setUserId(data.user.id);
+              if (data.user.created_at) {
+                setCreatedAt(new Date(data.user.created_at).toLocaleString('ja-JP'));
+              }
             }
           }
         } catch (e) {
@@ -28,6 +36,18 @@ export default function Home() {
         if (savedStamps) {
           setCurrentStamps(Number(savedStamps));
         }
+        setUserId(0);
+        setCreatedAt(new Date().toLocaleString('ja-JP'));
+      }
+      
+      try {
+        const menuRes = await fetch('/api/menu');
+        const menuData = await menuRes.json();
+        if (menuData.special) {
+          setTodaySpecial(menuData.special);
+        }
+      } catch (e) {
+        console.error(e);
       }
     };
     
@@ -42,18 +62,51 @@ export default function Home() {
   ));
 
   return (
-    <div className="p-6 pt-12 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="p-6 pt-12 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
       
       {/* Header Profile Section */}
-      <div className="flex items-center justify-between text-white">
+      <div className="flex items-center justify-between text-white relative">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">こんにちは、<br/>{nickname} さん</h1>
           <p className="text-blue-100 flex items-center gap-1 mt-1 text-sm">
             <Award size={16} /> ゴールドランク
           </p>
         </div>
-        <div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30">
-          <User size={28} className="text-white" />
+        
+        <div className="relative">
+          <button 
+            onClick={() => setShowAccountMenu(!showAccountMenu)}
+            className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 hover:bg-white/30 transition shadow-sm"
+          >
+            <User size={28} className="text-white" />
+          </button>
+          
+          {showAccountMenu && (
+            <div className="absolute top-16 right-0 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-4 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2">
+              <h3 className="font-bold border-b border-slate-100 pb-2 mb-3">アカウント情報</h3>
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">ユーザーID</span>
+                  <span className="font-bold text-slate-700">{userId ?? '未設定'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-medium">登録日時</span>
+                  <span className="font-bold text-slate-700 text-xs mt-0.5">{createdAt ?? 'ゲストアクセス'}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  fetch('/api/auth/me', { method: 'POST' }).then(() => {
+                    localStorage.removeItem('app_mode');
+                    window.location.reload();
+                  });
+                }}
+                className="mt-4 w-full bg-red-50 text-red-600 hover:bg-red-100 py-2 rounded-xl text-sm font-semibold transition"
+              >
+                ログアウト (モード選択へ)
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -90,7 +143,9 @@ export default function Home() {
             <Info size={18} />
           </div>
           <p className="font-bold text-sm text-slate-800">本日のメニュー</p>
-          <p className="text-xs text-slate-500 text-balance">日替わり定食は「油淋鶏」です！</p>
+          <p className="text-xs text-slate-500 text-balance">
+            {todaySpecial ? `日替わり定食は「${todaySpecial.name}」です！` : '本日の日替わりは未登録です。'}
+          </p>
         </div>
         
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col gap-2">
