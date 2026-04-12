@@ -1,4 +1,4 @@
-import { sql } from '@/lib/db';
+import sql from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { Trash2, Plus, Users, Hash } from 'lucide-react';
@@ -6,8 +6,8 @@ import { Trash2, Plus, Users, Hash } from 'lucide-react';
 export const dynamic = 'force-dynamic'; // Prevent caching so we always see fresh data
 
 export default async function AdminPage() {
-  let users = [];
-  let hashes = [];
+  let users: any[] = [];
+  let hashes: any[] = [];
   let error = null;
 
   try {
