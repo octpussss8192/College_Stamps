@@ -48,49 +48,18 @@ export async function POST(req: NextRequest) {
         text = visionData.responses[0].fullTextAnnotation.text;
         textAnnotations = visionData.responses[0].textAnnotations || [];
         
-        // --- Fraud Detection Phase (不正防止機能: レイアウト・フォーマット・フォント総合評価) ---
-        // 1. フォーマット評価: 食券特有のキーワードが含まれているか (表記ゆれ対応)
-        const hasYen = text.includes('￥') || text.includes('¥') || text.includes('円');
-        const hasShokudo = text.includes('食堂') || text.includes('高専');
-        const hasTimeOrDate = text.includes(':') || text.match(/\d+[\.\/]\d+/);
-        const formatValid = hasYen && (hasShokudo || hasTimeOrDate);
+        // --- Fraud Detection Phase (不正防止機能: 緩和版) ---
+        // 1. フォーマット評価: 数字が含まれているか、もしくは特定の文字がかすかにでも入っているか
+        const hasNumber = /\d+/.test(text);
+        const hasSomeValidText = text.includes('￥') || text.includes('¥') || text.includes('円') || text.includes('食堂') || text.includes('高専');
+        const formatValid = hasNumber && hasSomeValidText;
         
         if (!formatValid) {
-           throw new Error("食券のフォーマットが不正です。判定に必要な情報が不足しています。正しい食券を撮影してください。");
+           throw new Error("食券のフォーマットが確認できません。もう少し明るい場所で、食券全体が写るように撮影してください。");
         }
 
-        // 2. レイアウト評価: 相対的な位置関係を検証
-        if (textAnnotations.length > 1) {
-           const yPositions = textAnnotations.slice(1).map(ann => {
-             const yCoords = ann.boundingPoly.vertices.map((v: any) => v.y || 0);
-             return {
-               text: ann.description,
-               minY: Math.min(...yCoords),
-             };
-           });
-           
-           const shokudoElement = yPositions.find(p => p.text.includes('食堂') || p.text.includes('高専'));
-           const priceElement = yPositions.find(p => p.text.includes('￥') || p.text.includes('¥') || p.text.match(/500|4[0-9]{2}/));
-           
-           if (shokudoElement && priceElement) {
-              // 物理的な食券では、「食堂/高専」は下部に印字されることが多い。
-              // 値段より極端に上(例えば-150px以上)にある場合は不正レイアウトとみなす
-              if (shokudoElement.minY < priceElement.minY - 150) { 
-                 throw new Error("食券のレイアウトが不正です。要素の配置が通常と異なります。(レイアウト評価エラー)");
-              }
-           }
-           
-           // 3. フォント・ピクセル評価: 極端なサイズの文字はスマホ画面の直接撮影などを疑う
-           const priceAnnotation = textAnnotations.find(a => a.description.includes('500') || a.description.includes('￥') || a.description.includes('¥'));
-           if (priceAnnotation) {
-              const vertices = priceAnnotation.boundingPoly.vertices;
-              const height = Math.abs((vertices[2]?.y || 0) - (vertices[0]?.y || 0));
-              // Allow larger upper bound just in case they zoom in closely
-              if (height < 10 || height > 800) {
-                 throw new Error("フォントサイズまたは画角が不正です。適切な距離から撮影してください。(フォント総合評価エラー)");
-              }
-           }
-        }
+        // 2. フォント評価 (完全に制限を撤去し、読み取れていればよしとする)
+        // 以前の異常判定ロジックは撤去しました。
       } else {
         console.warn("Vision API returned empty result:", visionData);
         text = "";

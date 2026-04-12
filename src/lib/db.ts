@@ -2,7 +2,9 @@ import Database from 'better-sqlite3';
 import path from 'path';
 
 // Define DB path
-const dbPath = path.join(process.cwd(), 'gakushoku.db');
+// Vercelはルートディレクトリが読み取り専用のため、/tmp フォルダを利用します
+// ※注意: /tmp は一時領域のため、データはしばらくすると消去されます。本格運用には Vercel Postgres 等が必要です。
+const dbPath = process.env.VERCEL ? '/tmp/gakushoku.db' : path.join(process.cwd(), 'gakushoku.db');
 const db = new Database(dbPath);
 
 // Initialize tables
