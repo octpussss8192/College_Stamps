@@ -75,17 +75,25 @@ export async function POST(req: NextRequest) {
 
     console.log("Extracted Text:", text);
 
-    // Simple Regex pattern matching
+    // 正規表現による抽出ロジックの強化
     const dateMatch = text.match(/\d{2}\s*[\.\/]\s*\d{1,2}\s*[\.\/]\s*\d{1,2}/);
     const timeMatch = text.match(/\d{2}\s*:\s*\d{2}/);
     const priceMatch = text.match(/[￥¥]\s*([0-9,]+)/) || text.match(/([0-9,]+)\s*円/);
-    const hashMatch = text.match(/\b\d{4,8}\b/);
+    
+    // ID（ハッシュ）の抽出: 6桁の数字を最優先、なければ4-8桁
+    const allCandidateHashes = text.match(/\b\d{6}\b/g) || text.match(/\b\d{4,8}\b/g) || [];
+    // 金額(例:500)や日付文字列に含まれる数字を除外して、真のIDを特定
+    const finalHash = allCandidateHashes.find(h => {
+      const isPrice = priceMatch && priceMatch[1].includes(h);
+      const isDate = dateMatch && dateMatch[0].includes(h);
+      return !isPrice && !isDate;
+    }) || (allCandidateHashes.length > 0 ? allCandidateHashes[0] : null);
 
     const extractedData = {
       date: dateMatch ? dateMatch[0].replace(/\//g, '.') : new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }).substring(2).replace(/\//g, '. '),
       time: timeMatch ? timeMatch[0] : new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }),
       price: priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : 450,
-      hash: hashMatch ? hashMatch[0] : String(Math.floor(Math.random() * 900000) + 100000),
+      hash: finalHash || String(Math.floor(Math.random() * 900000) + 100000),
       isVisionActive: true
     };
 
