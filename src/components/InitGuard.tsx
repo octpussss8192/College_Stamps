@@ -89,6 +89,10 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
     }
   };
 
+  if (pathname.startsWith('/admin')) {
+    return <>{children}</>;
+  }
+
   if (isChecking) {
     return (
       <div className="fixed inset-0 z-[100] bg-slate-50 flex items-center justify-center">
@@ -101,32 +105,45 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
   if (!appMode && !showAuth) {
     return (
       <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col p-6 items-center justify-center text-white">
-        <div className="flex-1 flex flex-col justify-center items-center gap-8 w-full max-w-sm animate-in fade-in zoom-in-95 duration-500">
-          <div className="text-center">
+        <div className="flex-1 flex flex-col justify-center items-center gap-6 w-full max-w-sm animate-in fade-in zoom-in-95 duration-500">
+          <div className="text-center mb-2">
             <h1 className="text-3xl font-extrabold tracking-tight mb-2">学食クソアプリ</h1>
             <p className="text-slate-400 text-sm">起動モードを選択してください</p>
           </div>
 
           <button 
             onClick={() => selectMode('demo')}
-            className="w-full bg-slate-800 border border-slate-700 hover:bg-slate-700 transition rounded-2xl p-6 flex flex-col gap-2 items-center justify-center text-center group"
+            className="w-full bg-slate-800 border border-slate-700 hover:bg-slate-700 transition rounded-2xl p-5 flex flex-col gap-2 items-center justify-center text-center group"
           >
-            <div className="w-14 h-14 rounded-full bg-slate-700 group-hover:bg-slate-600 flex items-center justify-center text-slate-300 mb-2 transition">
-              <Info size={28} />
+            <div className="w-12 h-12 rounded-full bg-slate-700 group-hover:bg-slate-600 flex items-center justify-center text-slate-300 mb-1 transition">
+              <Info size={24} />
             </div>
-            <h2 className="text-xl font-bold">デモ版 (Demo)</h2>
-            <p className="text-slate-400 text-xs">登録不要ですぐにお試しいただけます。<br/>データは端末に保存されます。</p>
+            <h2 className="text-lg font-bold">デモ版 (Demo)</h2>
+            <p className="text-slate-400 text-xs text-balance">登録不要・データは端末に保存</p>
           </button>
 
           <button 
             onClick={() => selectMode('release')}
-            className="w-full bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 transition rounded-2xl p-6 flex flex-col gap-2 items-center justify-center text-center shadow-lg shadow-blue-500/30 group"
+            className="w-full bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 transition rounded-2xl p-5 flex flex-col gap-2 items-center justify-center text-center shadow-lg shadow-blue-500/30 group"
           >
-            <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white mb-2 transform group-hover:scale-110 transition">
-              <Fingerprint size={28} />
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white mb-1 transform group-hover:scale-110 transition">
+              <Fingerprint size={24} />
             </div>
-            <h2 className="text-xl font-bold">リリース版 (Release)</h2>
-            <p className="text-blue-100 text-xs">ユーザー登録を行い、本番同様の<br/>機能とDB通信を利用できます。</p>
+            <h2 className="text-lg font-bold">リリース版 (Release)</h2>
+            <p className="text-blue-100 text-xs text-balance">要ユーザー登録・クラウドDB連携</p>
+          </button>
+
+          <button 
+            onClick={() => {
+              localStorage.setItem('app_mode', 'admin');
+              router.push('/admin');
+            }}
+            className="w-full mt-4 bg-slate-800/50 border border-pink-500/30 hover:bg-pink-500/10 transition rounded-2xl p-4 flex gap-4 items-center justify-center text-center group"
+          >
+            <div className="text-pink-400">
+              <Info size={20} />
+            </div>
+            <h2 className="text-sm font-bold text-pink-400">管理者デバッグモード (Admin)</h2>
           </button>
         </div>
       </div>
