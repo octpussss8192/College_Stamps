@@ -98,14 +98,12 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen p-4 pt-12 sm:p-8 sm:pt-12 pb-24">
       <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
+        <div className="flex items-center justify-between text-white mb-2">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
-              管理者ダッシュボード
-            </h1>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1">デバッグおよびデータ管理用</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">管理者ダッシュボード</h1>
+            <p className="text-blue-100 text-xs sm:text-sm mt-1">デバッグおよびデータ管理用</p>
           </div>
-          <Link href="/" className="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition text-sm whitespace-nowrap shadow-sm">
+          <Link href="/" className="px-5 py-2.5 bg-white/20 backdrop-blur-md text-white font-bold rounded-xl hover:bg-white/30 transition text-sm whitespace-nowrap shadow-sm border border-white/30">
             トップへ戻る
           </Link>
         </div>

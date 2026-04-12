@@ -15,12 +15,12 @@ export default async function MenuPage() {
   return (
     <div className="p-6 pt-12 pb-24 max-w-lg mx-auto">
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+        <div className="w-12 h-12 bg-white/20 backdrop-blur-md text-white rounded-2xl flex items-center justify-center border border-white/30">
           <Utensils size={24} />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">メニュー</h1>
-          <p className="text-sm text-slate-500">学食の提供メニュー</p>
+        <div className="text-white">
+          <h1 className="text-2xl font-bold tracking-tight">メニュー</h1>
+          <p className="text-sm text-blue-100">学食の提供メニュー</p>
         </div>
       </div>
 
