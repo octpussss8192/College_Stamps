@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import BottomNavigation from "@/components/BottomNavigation";
+import InitGuard from "@/components/InitGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -40,11 +41,13 @@ export default function RootLayout({
           v1.0.0 (Beta)
         </div>
         
-        <main className="w-full h-full min-h-screen">
-          {children}
-        </main>
-        
-        <BottomNavigation />
+        <InitGuard>
+          <main className="w-full h-full min-h-screen">
+            {children}
+          </main>
+          
+          <BottomNavigation />
+        </InitGuard>
       </body>
     </html>
   );

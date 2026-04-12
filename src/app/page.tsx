@@ -4,14 +4,34 @@ import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [currentStamps, setCurrentStamps] = useState(0);
+  const [nickname, setNickname] = useState('〇〇大学 学生');
   const maxStamps = 20;
 
   useEffect(() => {
-    // コンポーネントマウント時にlocalStorageから取得
-    const savedStamps = localStorage.getItem('user_stamps');
-    if (savedStamps) {
-      setCurrentStamps(Number(savedStamps));
-    }
+    const fetchUserData = async () => {
+      const mode = localStorage.getItem('app_mode');
+      if (mode === 'release') {
+        try {
+          const res = await fetch('/api/auth/me');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+              setCurrentStamps(data.user.stamps);
+              setNickname(data.user.nickname);
+            }
+          }
+        } catch (e) {
+             console.error(e);
+        }
+      } else {
+        const savedStamps = localStorage.getItem('user_stamps');
+        if (savedStamps) {
+          setCurrentStamps(Number(savedStamps));
+        }
+      }
+    };
+    
+    fetchUserData();
   }, []);
   
   // Render dummy stamps
@@ -27,7 +47,7 @@ export default function Home() {
       {/* Header Profile Section */}
       <div className="flex items-center justify-between text-white">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">こんにちは、<br/>〇〇大学 学生さん</h1>
+          <h1 className="text-2xl font-bold tracking-tight">こんにちは、<br/>{nickname} さん</h1>
           <p className="text-blue-100 flex items-center gap-1 mt-1 text-sm">
             <Award size={16} /> ゴールドランク
           </p>

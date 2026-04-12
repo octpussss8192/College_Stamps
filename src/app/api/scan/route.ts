@@ -43,16 +43,62 @@ export async function POST(req: NextRequest) {
         console.error("Google Vision API Error:", visionData.error);
         throw new Error(visionData.error.message || "Vision API Keyが無効、またはAPIが有効化されていません。");
       }
-      
+      let textAnnotations: any[] = [];
       if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
         text = visionData.responses[0].fullTextAnnotation.text;
+        textAnnotations = visionData.responses[0].textAnnotations || [];
+        
+        // --- Fraud Detection Phase (不正防止機能: レイアウト・フォーマット・フォント総合評価) ---
+        // 1. フォーマット評価: 食券特有のキーワードが含まれているか
+        const requiredKeywords = ['￥', '食堂', ':'];
+        const formatValid = requiredKeywords.every(k => text.includes(k));
+        
+        if (!formatValid) {
+           throw new Error("食券のフォーマットが不正です。判定に必要な情報が不足しています。");
+        }
+
+        // 2. レイアウト評価: 日付が上部にあり、食堂の文字が下部にあるか等の相対的な位置関係を検証
+        if (textAnnotations.length > 1) {
+           // textAnnotations[0]は画像全体のテキスト、1以降が各要素
+           const yPositions = textAnnotations.slice(1).map(ann => {
+             const yCoords = ann.boundingPoly.vertices.map((v: any) => v.y || 0);
+             return {
+               text: ann.description,
+               minY: Math.min(...yCoords),
+             };
+           });
+           
+           const shokudoElement = yPositions.find(p => p.text.includes('食堂'));
+           const priceElement = yPositions.find(p => p.text.includes('￥') || p.text.includes('¥'));
+           
+           if (shokudoElement && priceElement) {
+              // 「食堂」は値段や日付よりも下部にあるのが正しいレイアウト
+              if (shokudoElement.minY < priceElement.minY - 50) { // 50px tolerance
+                 throw new Error("食券のレイアウトが不正です。要素の配置が通常と異なります。(レイアウト評価エラー)");
+              }
+           }
+           
+           // 3. フォント・ピクセル評価: 画質が低すぎる、あるいは文字が極端に巨大・微小な場合はリジェクト
+           const priceAnnotation = textAnnotations.find(a => a.description.includes('500') || a.description.includes('￥'));
+           if (priceAnnotation) {
+              const vertices = priceAnnotation.boundingPoly.vertices;
+              // 高さの近似値を計算
+              const height = Math.abs((vertices[2]?.y || 0) - (vertices[0]?.y || 0));
+              if (height < 10 || height > 500) {
+                 throw new Error("フォントサイズまたは画角が不正です。適切な距離から撮影してください。(フォント総合評価エラー)");
+              }
+           }
+        }
       } else {
         console.warn("Vision API returned empty result:", visionData);
-        // 画像に文字が含まれていない場合などは空文字のまま進める
         text = "";
       }
     } catch (visionError: any) {
       console.error("Vision API Request Failed:", visionError);
+      // Let the user know if it's a specific validation error
+      if (visionError.message.includes('不正') || visionError.message.includes('評価エラー')) {
+         return NextResponse.json({ error: visionError.message }, { status: 400 });
+      }
       return NextResponse.json({ error: `APIエラー: ${visionError.message}` }, { status: 500 });
     }
 
