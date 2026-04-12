@@ -96,7 +96,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-8 pb-24">
+    <div className="min-h-screen p-4 pt-12 sm:p-8 sm:pt-12 pb-24">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
           <div>

@@ -13,7 +13,7 @@ export default async function MenuPage() {
   }
 
   return (
-    <div className="p-6 pt-12 pb-24 max-w-lg mx-auto bg-slate-50 min-h-screen">
+    <div className="p-6 pt-12 pb-24 max-w-lg mx-auto">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
           <Utensils size={24} />
