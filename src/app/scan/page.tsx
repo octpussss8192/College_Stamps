@@ -104,9 +104,9 @@ export default function ScanPage() {
         throw new Error(data.error || "スタンプ登録に失敗しました。");
       }
 
-      // ローカルストレージにスタンプ数を保存（金額に応じて1〜2個追加などの簡易ロジック）
+      // ローカルストレージにスタンプ数を保存（金額に応じてではなく常に1個追加）
       const currentStamps = Number(localStorage.getItem('user_stamps') || '0');
-      const stampsToAdd = parsedData.price >= 500 ? 2 : 1;
+      const stampsToAdd = 1;
       localStorage.setItem('user_stamps', String(currentStamps + stampsToAdd));
 
       setResult(true);

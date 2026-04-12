@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // Check if user exists
     const existing = await sql`SELECT id FROM users WHERE nickname = ${nickname}`;
-    if (existing.rowCount > 0) {
+    if ((existing.rowCount ?? 0) > 0) {
       return NextResponse.json({ error: "このニックネームは既に使われています。" }, { status: 400 });
     }
 

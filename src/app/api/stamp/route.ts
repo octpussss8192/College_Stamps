@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       // Release Mode: Use Database
       try {
         const existing = await sql`SELECT hash FROM used_hashes WHERE hash = ${data.hash}`;
-        if (existing.rowCount > 0) {
+        if ((existing.rowCount ?? 0) > 0) {
            throw new Error("USED");
         }
         
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
           VALUES (${Number(sessionId)}, ${data.date}, ${data.time}, ${data.price}, ${data.hash})
         `;
         
-        const stampsToAdd = Number(data.price) >= 500 ? 2 : 1;
+        const stampsToAdd = 1;
         await sql`UPDATE users SET stamps = stamps + ${stampsToAdd} WHERE id = ${Number(sessionId)}`;
         
       } catch (dbErr: any) {
