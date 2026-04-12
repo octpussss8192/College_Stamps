@@ -16,7 +16,7 @@ export default function BottomNavigation() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-lg border-t border-slate-200 z-50">
-      <div className="max-w-md mx-auto h-full flex justify-around items-center px-6">
+      <div className="max-w-md mx-auto h-full flex justify-between items-center px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -24,12 +24,12 @@ export default function BottomNavigation() {
             <Link 
               key={item.href} 
               href={item.href}
-              className={`flex flex-col items-center gap-1 transition-all duration-300 ${
+              className={`flex-1 flex flex-col justify-center items-center gap-1 transition-all duration-300 ${
                 isActive ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">{item.name}</span>
+              <span className="text-[10px] font-medium whitespace-nowrap">{item.name}</span>
             </Link>
           );
         })}
