@@ -49,17 +49,18 @@ export async function POST(req: NextRequest) {
         textAnnotations = visionData.responses[0].textAnnotations || [];
         
         // --- Fraud Detection Phase (不正防止機能: レイアウト・フォーマット・フォント総合評価) ---
-        // 1. フォーマット評価: 食券特有のキーワードが含まれているか
-        const requiredKeywords = ['￥', '食堂', ':'];
-        const formatValid = requiredKeywords.every(k => text.includes(k));
+        // 1. フォーマット評価: 食券特有のキーワードが含まれているか (表記ゆれ対応)
+        const hasYen = text.includes('￥') || text.includes('¥') || text.includes('円');
+        const hasShokudo = text.includes('食堂') || text.includes('高専');
+        const hasTimeOrDate = text.includes(':') || text.match(/\d+[\.\/]\d+/);
+        const formatValid = hasYen && (hasShokudo || hasTimeOrDate);
         
         if (!formatValid) {
-           throw new Error("食券のフォーマットが不正です。判定に必要な情報が不足しています。");
+           throw new Error("食券のフォーマットが不正です。判定に必要な情報が不足しています。正しい食券を撮影してください。");
         }
 
-        // 2. レイアウト評価: 日付が上部にあり、食堂の文字が下部にあるか等の相対的な位置関係を検証
+        // 2. レイアウト評価: 相対的な位置関係を検証
         if (textAnnotations.length > 1) {
-           // textAnnotations[0]は画像全体のテキスト、1以降が各要素
            const yPositions = textAnnotations.slice(1).map(ann => {
              const yCoords = ann.boundingPoly.vertices.map((v: any) => v.y || 0);
              return {
@@ -68,23 +69,24 @@ export async function POST(req: NextRequest) {
              };
            });
            
-           const shokudoElement = yPositions.find(p => p.text.includes('食堂'));
-           const priceElement = yPositions.find(p => p.text.includes('￥') || p.text.includes('¥'));
+           const shokudoElement = yPositions.find(p => p.text.includes('食堂') || p.text.includes('高専'));
+           const priceElement = yPositions.find(p => p.text.includes('￥') || p.text.includes('¥') || p.text.match(/500|4[0-9]{2}/));
            
            if (shokudoElement && priceElement) {
-              // 「食堂」は値段や日付よりも下部にあるのが正しいレイアウト
-              if (shokudoElement.minY < priceElement.minY - 50) { // 50px tolerance
+              // 物理的な食券では、「食堂/高専」は下部に印字されることが多い。
+              // 値段より極端に上(例えば-150px以上)にある場合は不正レイアウトとみなす
+              if (shokudoElement.minY < priceElement.minY - 150) { 
                  throw new Error("食券のレイアウトが不正です。要素の配置が通常と異なります。(レイアウト評価エラー)");
               }
            }
            
-           // 3. フォント・ピクセル評価: 画質が低すぎる、あるいは文字が極端に巨大・微小な場合はリジェクト
-           const priceAnnotation = textAnnotations.find(a => a.description.includes('500') || a.description.includes('￥'));
+           // 3. フォント・ピクセル評価: 極端なサイズの文字はスマホ画面の直接撮影などを疑う
+           const priceAnnotation = textAnnotations.find(a => a.description.includes('500') || a.description.includes('￥') || a.description.includes('¥'));
            if (priceAnnotation) {
               const vertices = priceAnnotation.boundingPoly.vertices;
-              // 高さの近似値を計算
               const height = Math.abs((vertices[2]?.y || 0) - (vertices[0]?.y || 0));
-              if (height < 10 || height > 500) {
+              // Allow larger upper bound just in case they zoom in closely
+              if (height < 10 || height > 800) {
                  throw new Error("フォントサイズまたは画角が不正です。適切な距離から撮影してください。(フォント総合評価エラー)");
               }
            }

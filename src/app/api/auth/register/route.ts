@@ -23,11 +23,11 @@ export async function POST(req: NextRequest) {
       throw err;
     }
 
-    const userId = info.lastInsertRowid;
+    const userId = Number(info.lastInsertRowid);
 
     const response = NextResponse.json({ success: true, userId, nickname });
     
-    // Set a simple cookie session (HTTP only ideally, but keeping it simple for scope)
+    // Set a simple cookie session
     response.cookies.set('gakushoku_session', String(userId), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
