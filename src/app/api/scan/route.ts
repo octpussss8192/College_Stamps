@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
     const hashMatch = text.match(/\b\d{4,8}\b/);
 
     const extractedData = {
-      date: dateMatch ? dateMatch[0].replace(/\//g, '.') : new Date().toLocaleDateString('ja-JP').substring(2).replace(/\//g, '. '),
-      time: timeMatch ? timeMatch[0] : new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+      date: dateMatch ? dateMatch[0].replace(/\//g, '.') : new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }).substring(2).replace(/\//g, '. '),
+      time: timeMatch ? timeMatch[0] : new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }),
       price: priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : 450,
       hash: hashMatch ? hashMatch[0] : String(Math.floor(Math.random() * 900000) + 100000),
       isVisionActive: true
