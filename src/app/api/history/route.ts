@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import sql from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,14 +10,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ history: [] });
     }
 
-    const stmt = db.prepare(`
+    const { rows: history } = await sql`
       SELECT id, date, time, price, status 
       FROM history 
-      WHERE user_id = ? 
+      WHERE user_id = ${Number(sessionId)} 
       ORDER BY id DESC 
       LIMIT 50
-    `);
-    const history = stmt.all(Number(sessionId));
+    `;
 
     return NextResponse.json({ history });
   } catch (error) {

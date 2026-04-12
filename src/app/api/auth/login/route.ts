@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import sql from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ニックネームとパスワードを入力してください。" }, { status: 400 });
     }
 
-    const stmt = db.prepare('SELECT id, password FROM users WHERE nickname = ?');
-    const user = stmt.get(nickname) as { id: number, password: string } | undefined;
+    const { rows } = await sql`SELECT id, password FROM users WHERE nickname = ${nickname}`;
+    const user = rows[0];
 
     if (!user) {
       return NextResponse.json({ error: "ニックネームまたはパスワードが間違っています。" }, { status: 401 });

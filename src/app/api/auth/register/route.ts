@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import sql from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
@@ -12,18 +12,18 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const stmt = db.prepare('INSERT INTO users (nickname, password) VALUES (?, ?)');
-    let info;
-    try {
-      info = stmt.run(nickname, hashedPassword);
-    } catch (err: any) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        return NextResponse.json({ error: "このニックネームは既に使われています。" }, { status: 400 });
-      }
-      throw err;
+    // Check if user exists
+    const existing = await sql`SELECT id FROM users WHERE nickname = ${nickname}`;
+    if (existing.rowCount > 0) {
+      return NextResponse.json({ error: "このニックネームは既に使われています。" }, { status: 400 });
     }
 
-    const userId = Number(info.lastInsertRowid);
+    const { rows } = await sql`
+      INSERT INTO users (nickname, password)
+      VALUES (${nickname}, ${hashedPassword})
+      RETURNING id
+    `;
+    const userId = rows[0].id;
 
     const response = NextResponse.json({ success: true, userId, nickname });
     

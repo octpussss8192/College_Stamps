@@ -1,39 +1,44 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { sql } from '@vercel/postgres';
 
-// Define DB path
-// Vercelはルートディレクトリが読み取り専用のため、/tmp フォルダを利用します
-// ※注意: /tmp は一時領域のため、データはしばらくすると消去されます。本格運用には Vercel Postgres 等が必要です。
-const dbPath = process.env.VERCEL ? '/tmp/gakushoku.db' : path.join(process.cwd(), 'gakushoku.db');
-const db = new Database(dbPath);
+export async function initDb() {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        stamps INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
 
-// Initialize tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nickname TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
-    stamps INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+    await sql`
+      CREATE TABLE IF NOT EXISTS history (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        date VARCHAR(255),
+        time VARCHAR(255),
+        price INTEGER,
+        hash VARCHAR(255),
+        status VARCHAR(255) DEFAULT 'success',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
 
-  CREATE TABLE IF NOT EXISTS history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    date TEXT,
-    time TEXT,
-    price INTEGER,
-    hash TEXT,
-    status TEXT DEFAULT 'success',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-  );
+    await sql`
+      CREATE TABLE IF NOT EXISTS used_hashes (
+        hash VARCHAR(255) PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    console.log("Postgres database initialized successfully.");
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
+  }
+}
 
-  CREATE TABLE IF NOT EXISTS used_hashes (
-    hash TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+// Automatically trigger initialization if needed
+initDb();
 
-export default db;
+export default sql;

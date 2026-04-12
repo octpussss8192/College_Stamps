@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import sql from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const stmt = db.prepare('SELECT id, nickname, stamps FROM users WHERE id = ?');
-    const user = stmt.get(sessionId) as { id: number, nickname: string, stamps: number } | undefined;
+    const { rows } = await sql`SELECT id, nickname, stamps FROM users WHERE id = ${Number(sessionId)}`;
+    const user = rows[0];
 
     if (!user) {
       return NextResponse.json({ authenticated: false }, { status: 401 });

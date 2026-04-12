@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import sql from "@/lib/db";
 
 // 簡易的な重複チェック用の一時データストア (Demo Mode)
 const usedHashesFallback = new Set<string>();
@@ -18,23 +18,23 @@ export async function POST(req: NextRequest) {
     if (isReleaseMode) {
       // Release Mode: Use Database
       try {
-        db.transaction(() => {
-          // Check if hash is used globally or just by this user? Globally for a ticket.
-          const checkStmt = db.prepare('SELECT hash FROM used_hashes WHERE hash = ?');
-          if (checkStmt.get(data.hash)) {
-             throw new Error("USED");
-          }
-          
-          db.prepare('INSERT INTO used_hashes (hash, user_id) VALUES (?, ?)').run(data.hash, Number(sessionId));
-          db.prepare('INSERT INTO history (user_id, date, time, price, hash) VALUES (?, ?, ?, ?, ?)').run(
-            Number(sessionId), data.date, data.time, data.price, data.hash
-          );
-          
-          const stampsToAdd = Number(data.price) >= 500 ? 2 : 1;
-          db.prepare('UPDATE users SET stamps = stamps + ? WHERE id = ?').run(stampsToAdd, Number(sessionId));
-        })();
+        const existing = await sql`SELECT hash FROM used_hashes WHERE hash = ${data.hash}`;
+        if (existing.rowCount > 0) {
+           throw new Error("USED");
+        }
+        
+        await sql`INSERT INTO used_hashes (hash, user_id) VALUES (${data.hash}, ${Number(sessionId)})`;
+        
+        await sql`
+          INSERT INTO history (user_id, date, time, price, hash) 
+          VALUES (${Number(sessionId)}, ${data.date}, ${data.time}, ${data.price}, ${data.hash})
+        `;
+        
+        const stampsToAdd = Number(data.price) >= 500 ? 2 : 1;
+        await sql`UPDATE users SET stamps = stamps + ${stampsToAdd} WHERE id = ${Number(sessionId)}`;
+        
       } catch (dbErr: any) {
-        if (dbErr.message === "USED" || dbErr.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+        if (dbErr.message === "USED" || dbErr.code === '23505') { // Postgres unique constraint violation
           return NextResponse.json({ error: "この食券IDは既に利用されているため、登録できません。" }, { status: 400 });
         }
         throw dbErr;
