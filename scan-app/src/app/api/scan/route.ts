@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     let text = "";
+    let visionData: any = null;
 
     try {
       console.log("[Scan-App] Calling Google Cloud Vision API...");
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
         }),
       });
 
-      const visionData = await response.json();
+      visionData = await response.json();
       
       if (visionData.error) {
         throw new Error(visionData.error.message || "Vision API Error");
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
 
     // --- 座標情報の抽出 (画像上の位置を特定) ---
     const detectedBoxes: any[] = [];
-    const fullAnnotation = visionData.responses[0].fullTextAnnotation;
+    const fullAnnotation = visionData?.responses?.[0]?.fullTextAnnotation;
     
     // ヘルパー: 特定の検索結果に一致するブロックの座標を探す
     const findBoxFor = (label: string, value: string | number) => {
