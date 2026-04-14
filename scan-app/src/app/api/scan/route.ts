@@ -210,6 +210,26 @@ export async function POST(req: NextRequest) {
     findBoxFor("価格", extractedPrice);
     findBoxFor("ID", finalHash);
 
+    // --- 厳格なバリデーションチェック ---
+    const isDateFound = !!dateMatch;
+    const isTimeFound = allTimes.length > 0;
+    const isPriceFound = priceMatches.length > 0 && prices.length > 0;
+    const isIdFound = allCandidateIds.length > 0;
+    const isStationFound = isStationValid;
+
+    if (!isDateFound || !isTimeFound || !isPriceFound || !isIdFound || !isStationFound) {
+      let missingParts = [];
+      if (!isDateFound) missingParts.push("日付");
+      if (!isTimeFound) missingParts.push("時刻");
+      if (!isPriceFound) missingParts.push("価格");
+      if (!isIdFound) missingParts.push("食券ID");
+      if (!isStationFound) missingParts.push("店舗情報(北九州高専)");
+
+      return NextResponse.json({ 
+        error: `食券の判別に必要な情報が不足しています（不足: ${missingParts.join(", ")}）。明るい場所で、全ての文字がはっきり写るように撮影してください。` 
+      }, { status: 400 });
+    }
+
     const extractedData = {
       date: extractedDate,
       time: extractedTime,
@@ -222,7 +242,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: isStationValid ? "解析完了" : "注意: 指定店舗の文字が確認できません",
+      message: "解析完了",
       data: extractedData
     });
 
