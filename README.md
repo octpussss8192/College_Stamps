@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 学食クソアプリ - 分割開発プロジェクト
 
-## Getting Started
+このリポジトリは、開発効率化と分業のために2つのサブプロジェクトに分割されています。
 
-First, run the development server:
+## プロジェクト構成
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+学食クソアプリ/
+├── gakushoku-app/    # メインアプリ（ホーム、履歴、特典、管理者など）
+├── scan-app/         # スキャンアプリ（カメラ、OCR、偽造防止の開発）
+└── shared/           # 共有定義（両アプリで使う型定義など）
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 開発の始め方
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### メインアプリを担当する場合
+1. `cd gakushoku-app`
+2. `npm install`
+3. `npm run dev`
+- **内容**: ログイン、スタンプカード表示、メニュー確認などの全体ロジックを担当。
+- **注意**: スキャン画面は現在スタブになっています。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### スキャンアプリを担当する場合
+1. `cd scan-app`
+2. `npm install`
+3. `npm run dev`
+- **内容**: カメラ撮影のUX改善、Vision APIを使ったOCRの精度向上、偽造防止ロジックの開発。
+- **注意**: こちらはスキャン結果を表示するまでの単体機能です。
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 合体（リリース）について
+個別の開発が完了したら、`scan-app` の成果物を `gakushoku-app` の `src/app/scan` および `src/app/api/scan` にコピーすることで統合します。詳細は `shared/types.ts` の型定義に従ってください。

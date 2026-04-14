@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3b82f6;
+  --color-background-start: #f8fafc;
+  --color-background-end: #e2e8f0;
+}
+
+@layer base {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    @apply antialiased bg-slate-900 text-slate-100; /* スキャンアプリはダークテーマベースにする */
+  }
+}
+
+@layer utilities {
+  .glassmorphism {
+    @apply bg-white/10 backdrop-blur-md border border-white/10 shadow-xl;
+  }
+}
