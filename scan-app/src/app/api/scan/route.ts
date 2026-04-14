@@ -98,17 +98,17 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. 価格の抽出 (例: \ 5 0 0)
-    // ¥記号や\記号（誤認）の後の数字を取得。
-    const priceMatches = text.match(/[¥￥\\]\s*([\d\s,]+)/g) || [];
+    // ¥記号や\記号（誤認）の後の数字を取得。改行を跨がないように [ \t] を使用。
+    const priceMatches = text.match(/[¥￥\\][ \t]*([\d \t,]+)/g) || [];
     let extractedPrice = 450;
     if (priceMatches.length > 0) {
       const prices = priceMatches.map(p => {
         const val = p.replace(/[¥￥\\\s,]/g, '');
         return parseInt(val, 10);
-      }).filter(n => !isNaN(n) && n > 0);
+      }).filter(n => !isNaN(n) && n > 0 && n <= 999); // 1000円以上は誤認として除外
       
       if (prices.length > 0) {
-        // 最大の値を価格として採用（大きなフォントがメインである可能性が高いため）
+        // 最大の値を価格として採用
         extractedPrice = Math.max(...prices);
       }
     }
