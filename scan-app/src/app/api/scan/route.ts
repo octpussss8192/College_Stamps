@@ -60,29 +60,71 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `解析エラー: ${visionError.message}` }, { status: 500 });
     }
 
-    // データ抽出
-    const dateMatch = text.match(/\d{2}\s*[\.\/]\s*\d{1,2}\s*[\.\/]\s*\d{1,2}/);
-    const timeMatch = text.match(/\d{2}\s*:\s*\d{2}/);
-    const priceMatch = text.match(/[￥¥]\s*([0-9,]+)/) || text.match(/([0-9,]+)\s*円/);
-    const allCandidateHashes = text.match(/\b\d{6}\b/g) || text.match(/\b\d{4,8}\b/g) || [];
-    
-    const finalHash = allCandidateHashes.find(h => {
-      const isPrice = priceMatch && priceMatch[1].includes(h);
-      const isDate = dateMatch && dateMatch[0].includes(h);
-      return !isPrice && !isDate;
-    }) || (allCandidateHashes.length > 0 ? allCandidateHashes[0] : String(Math.floor(Math.random() * 900000) + 100000));
+    // --- 高度なデータ抽出ロジック (北九州高専レイアウト特化) ---
+    const lines = text.split('\n');
+    console.log("[Scan-App] Raw OCR Text lines:", lines);
+
+    // 1. 日付の抽出 (例: 26. -4. 10)
+    // パターン: YY . -M . DD または YY . M . DD (記号やスペースを許容)
+    const datePattern = /(\d{2})\s*[\.\-/_]\s*(\-?\s*\d{1,2})\s*[\.\-/_]\s*(\d{1,2})/;
+    const dateMatch = text.match(datePattern);
+    let extractedDate = "";
+    if (dateMatch) {
+      const year = dateMatch[1];
+      const month = dateMatch[2].replace(/[-\s]/g, '').padStart(2, '0');
+      const day = dateMatch[3].padStart(2, '0');
+      extractedDate = `${year}.${month}.${day}`;
+    } else {
+      extractedDate = new Date().toLocaleDateString('ja-JP').substring(2).replace(/\//g, '. ');
+    }
+
+    // 2. 時刻の抽出 (例: 11:34)
+    const timePattern = /(\d{1,2})\s*[:：]\s*(\d{2})/;
+    const timeMatch = text.match(timePattern);
+    const extractedTime = timeMatch ? `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}` : new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+    // 3. 価格の抽出 (例: ¥ 5 0 0)
+    // ¥記号の後の数字を、空白を飛ばして取得。大きい方を優先。
+    const priceMatches = text.match(/[¥￥]\s*([\d\s,]+)/g) || [];
+    let extractedPrice = 450;
+    if (priceMatches.length > 0) {
+      const prices = priceMatches.map(p => {
+        const val = p.replace(/[¥￥\s,]/g, '');
+        return parseInt(val, 10);
+      }).filter(n => !isNaN(n));
+      
+      if (prices.length > 0) {
+        // 最大の値を価格として採用（大きなフォントがメインである可能性が高いため）
+        extractedPrice = Math.max(...prices);
+      }
+    }
+
+    // 4. 食券ID (Hash) の抽出 (例: 183207)
+    // 右上に配置されることが多い6桁の独立した数字
+    const idPattern = /\b\d{6}\b/g;
+    const allCandidateIds = text.match(idPattern) || [];
+    const finalHash = allCandidateIds.find(h => {
+      // 価格や日付に含まれているものは除外
+      const isPrice = String(extractedPrice).includes(h);
+      const isDatePart = extractedDate.includes(h);
+      return !isPrice && !isDatePart;
+    }) || (allCandidateIds.length > 0 ? allCandidateIds[0] : String(Math.floor(Math.random() * 900000) + 100000));
+
+    // 5. 店舗名の確認 (偽造防止の基礎)
+    const isStationValid = text.includes('北九州') || text.includes('高専') || text.includes('食堂');
 
     const extractedData = {
-      date: dateMatch ? dateMatch[0].replace(/\//g, '.') : new Date().toLocaleDateString('ja-JP').substring(2).replace(/\//g, '. '),
-      time: timeMatch ? timeMatch[0] : new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-      price: priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : 450,
+      date: extractedDate,
+      time: extractedTime,
+      price: extractedPrice,
       hash: finalHash,
-      isVisionActive: true
+      isVisionActive: true,
+      shopInfo: isStationValid ? "北九州高専 食堂" : "不明な店舗"
     };
 
     return NextResponse.json({ 
       success: true, 
-      message: "解析完了",
+      message: isStationValid ? "解析完了" : "注意: 指定店舗の文字が確認できません",
       data: extractedData
     });
 

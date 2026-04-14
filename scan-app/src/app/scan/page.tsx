@@ -149,20 +149,26 @@ export default function ScanPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1 col-span-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">店舗情報</label>
+                <div className="px-3 py-2 bg-blue-900/40 border border-blue-700/50 rounded-lg text-sm font-bold text-blue-100 italic">
+                  {parsedData.shopInfo || "解析中..."}
+                </div>
+              </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-500">日付</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">日付</label>
                 <div className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-semibold">{parsedData.date}</div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-500">時間</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">時間</label>
                 <div className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-semibold">{parsedData.time}</div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-500">価格</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">価格</label>
                 <div className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-semibold">¥{parsedData.price}</div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-bold text-slate-500">食券ID</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">食券ID</label>
                 <div className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm font-semibold">{parsedData.hash}</div>
               </div>
             </div>
