@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Camera, RefreshCcw, Check, Loader2, Upload, Receipt, Pencil, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
