@@ -1,6 +1,6 @@
 {
-  "name": "学食スタンプアプリ",
-  "short_name": "Gakusyoku Stamp",
+  "name": "工クオン_学食スタンプ",
+  "short_name": "工クオン",
   "description": "食堂を利用してスタンプを貯めよう！",
   "start_url": "/",
   "display": "standalone",

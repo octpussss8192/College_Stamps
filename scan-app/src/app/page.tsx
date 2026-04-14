@@ -20,7 +20,7 @@ export default function Home() {
       </Link>
 
       <div className="text-xs text-slate-500 mt-12">
-        <p>© 2026 学食クソアプリ開発チーム</p>
+        <p>© 2026 工クオン_学食スタンプ開発チーム</p>
       </div>
     </div>
   );

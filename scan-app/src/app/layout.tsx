@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Gakusyoku Scanner",
+  title: "工クオン_食券スキャナー",
   description: "食券スキャン専用アプリ",
   manifest: "/manifest.json",
 };

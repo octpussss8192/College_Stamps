@@ -107,7 +107,7 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
       <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col p-6 items-center justify-center text-white">
         <div className="flex-1 flex flex-col justify-center items-center gap-6 w-full max-w-sm animate-in fade-in zoom-in-95 duration-500">
           <div className="text-center mb-2">
-            <h1 className="text-3xl font-extrabold tracking-tight mb-2">学食クソアプリ</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight mb-2">工クオン_学食スタンプ</h1>
             <p className="text-slate-400 text-sm">起動モードを選択してください</p>
           </div>
 

@@ -9,13 +9,13 @@ import VersionBadge from "@/components/VersionBadge";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Gakusyoku Stamp",
+  title: "工クオン_学食スタンプ",
   description: "いつもの学食をもっと楽しく。食券をスキャンしてスタンプを貯めよう！",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Gakusyoku Stamp",
+    title: "工クオン_学食スタンプ",
   },
 };
 
