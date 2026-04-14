@@ -189,27 +189,7 @@ export default function ScanPage() {
               </div>
             </div>
           ) : previewUrl ? (
-            <div className="relative w-full h-full flex items-center justify-center">
-              <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-              
-              {/* OCR Bounding Boxes Highlight */}
-              {parsedData && parsedData.boxes && parsedData.boxes.map((box: any, idx: number) => (
-                <div 
-                  key={idx}
-                  className="absolute pointer-events-none border-2 border-red-500 bg-red-500/30 rounded-sm animate-in zoom-in-50 duration-500"
-                  style={{
-                    left: `${(box.x / box.pageW) * 100}%`,
-                    top: `${(box.y / box.pageH) * 100}%`,
-                    width: `${(box.w / box.pageW) * 100}%`,
-                    height: `${(box.h / box.pageH) * 100}%`,
-                  }}
-                >
-                  <span className="absolute -top-4 left-0 bg-red-600 text-[8px] text-white px-1 leading-tight font-bold rounded-t-xs">
-                    {box.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
           ) : (
             <div className="flex flex-col items-center gap-4 text-slate-500">
               <div 
