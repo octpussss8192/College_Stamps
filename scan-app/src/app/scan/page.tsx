@@ -4,6 +4,14 @@ import { Camera, RefreshCcw, Check, Loader2, Upload, Receipt, Pencil, ArrowLeft 
 import Link from "next/link";
 
 export default function ScanPage() {
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [parsedData, setParsedData] = useState<any>(null); // Draft data from OCR
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
