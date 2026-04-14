@@ -45,12 +45,14 @@ export async function POST(req: NextRequest) {
       if (visionData.responses && visionData.responses[0].fullTextAnnotation) {
         text = visionData.responses[0].fullTextAnnotation.text;
         
-        // --- 偽造防止ロジックのベース（ここに今後追加していく） ---
-        const hasNumber = /\d+/.test(text);
-        const hasSomeValidText = text.includes('￥') || text.includes('¥') || text.includes('円') || text.includes('食堂') || text.includes('高専');
+        // --- 厳格な食券判定 (初期段階) ---
+        const hasSomeValidText = text.includes('￥') || text.includes('¥') || text.includes('\\') || text.includes('食堂') || text.includes('高専');
+        const hasDate = /(\d{2})\s*[\.\-/_]/.test(text);
+        const hasTime = /(\d{1,2})\s*[:：]\s*(\d{2})/.test(text);
         
-        if (!hasNumber || !hasSomeValidText) {
-           throw new Error("食券のフォーマットが確認できません。もう少し明るい場所で撮影してください。");
+        // これらが揃っていない場合は食券ではないと判断して早期リターン
+        if (!hasSomeValidText || !hasDate || !hasTime) {
+           throw new Error("有効な食券が確認できません。食券全体が写るように、明るい場所でもう一度撮影してください。");
         }
       } else {
         text = "";
