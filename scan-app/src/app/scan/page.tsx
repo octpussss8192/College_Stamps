@@ -149,16 +149,24 @@ export default function ScanPage() {
                 {/* Dark Mask with Cutout */}
                 <div className="absolute inset-0 bg-slate-950/70 shadow-[inset_0_0_120px_rgba(0,0,0,0.8)]"></div>
                 
-                {/* Rectangular Gray Guide */}
-                <div className="relative w-[85%] aspect-[2/1] border-2 border-slate-400/60 rounded-2xl bg-transparent z-10 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+                {/* Rectangular Gray Guide with internal watermarks */}
+                <div className="relative w-[85%] aspect-[2/1] border-2 border-slate-400/60 rounded-2xl bg-transparent z-10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden">
                   {/* Gray Corners */}
                   <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-slate-300 rounded-tl-xl"></div>
                   <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-slate-300 rounded-tr-xl"></div>
                   <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-slate-300 rounded-bl-xl"></div>
                   <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-slate-300 rounded-br-xl"></div>
                   
+                  {/* Internal Layout Watermarks (Gray boxes) */}
+                  <div className="absolute top-[8%] left-[4%] w-[25%] h-[15%] bg-slate-400/20 border border-slate-400/30 rounded-md"></div> {/* 日付 */}
+                  <div className="absolute top-[8%] right-[4%] w-[32%] h-[15%] bg-slate-400/20 border border-slate-400/30 rounded-md"></div> {/* ID */}
+                  <div className="absolute top-[35%] left-[34%] w-[55%] h-[35%] bg-slate-400/20 border border-slate-400/30 rounded-md"></div> {/* 金額(大) */}
+                  <div className="absolute bottom-[10%] left-[4%] w-[15%] h-[20%] bg-slate-400/20 border border-slate-400/30 rounded-md"></div> {/* 時刻 */}
+                  <div className="absolute bottom-[20%] right-[4%] w-[20%] h-[20%] bg-slate-400/20 border border-slate-400/30 rounded-md"></div> {/* 金額(小) */}
+                  <div className="absolute bottom-[8%] left-[28%] w-[42%] h-[12%] bg-slate-400/20 border border-slate-400/30 rounded-md"></div> {/* 店舗名 */}
+
                   <div className="absolute -bottom-12 left-0 right-0 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest py-1.5 bg-slate-900/60 backdrop-blur-md rounded-full border border-slate-700/50">
-                    撮影して解析を開始してください
+                    ガイドの枠に合わせて撮影してください
                   </div>
                 </div>
               </div>
