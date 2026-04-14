@@ -12,33 +12,53 @@ export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [autoCaptureTimer, setAutoCaptureTimer] = useState<number | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // カメラ起動時の自動シャッター制御
+  // カメラ起動時の自動認識ループ (2秒おきにサイレントに解析)
   useEffect(() => {
-    let timer: NodeJS.Timeout;
     if (isCameraActive && !loading && !parsedData) {
-      // 3秒後に自動撮影
-      timer = setTimeout(() => {
-        capturePhoto();
-      }, 3000);
-      setAutoCaptureTimer(3);
-      
-      // 秒読みカウントダウン（演出用）
-      const countdown = setInterval(() => {
-        setAutoCaptureTimer(prev => (prev && prev > 1 ? prev - 1 : null));
-      }, 1000);
+      scanIntervalRef.current = setInterval(() => {
+        autoCaptureAndScan();
+      }, 2000); // 2秒おきにチェック
       
       return () => {
-        clearTimeout(timer);
-        clearInterval(countdown);
-        setAutoCaptureTimer(null);
+        if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
       };
+    } else {
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
     }
   }, [isCameraActive, loading, parsedData]);
+
+  const autoCaptureAndScan = async () => {
+    if (!videoRef.current || loading || parsedData) return;
+    
+    setIsScanning(true);
+    const capturedBlob = await captureToBlob();
+    if (capturedBlob) {
+      const capturedFile = new File([capturedBlob], "auto-scan.jpg", { type: "image/jpeg" });
+      await performScan(capturedFile, true); // true = silent mode
+    }
+    setIsScanning(false);
+  };
+
+  const captureToBlob = (): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      if (videoRef.current && canvasRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.8);
+        } else resolve(null);
+      } else resolve(null);
+    });
+  };
 
   const startCamera = async () => {
     try {
@@ -66,26 +86,17 @@ export default function ScanPage() {
     setIsCameraActive(false);
   };
 
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const capturedFile = new File([blob], "captured-ticket.jpg", { type: "image/jpeg" });
-            setFile(capturedFile);
-            setPreviewUrl(URL.createObjectURL(capturedFile));
-            setParsedData(null);
-            stopCamera();
-          }
-        }, "image/jpeg", 0.9);
-      }
+  const capturePhoto = async () => {
+    setIsScanning(true);
+    const blob = await captureToBlob();
+    if (blob) {
+      const capturedFile = new File([blob], "captured-ticket.jpg", { type: "image/jpeg" });
+      setFile(capturedFile);
+      setPreviewUrl(URL.createObjectURL(capturedFile));
+      setParsedData(null);
+      stopCamera();
     }
+    setIsScanning(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,17 +119,18 @@ export default function ScanPage() {
 
   const handleScan = async () => {
     if (!file) return;
+    await performScan(file, false);
+  };
 
-    setLoading(true);
-    setProgress(0);
-    setError(null);
-
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => (prev >= 90 ? 90 : prev + 5));
-    }, 200);
+  const performScan = async (scanFile: File, silent: boolean) => {
+    if (!silent) {
+      setLoading(true);
+      setProgress(0);
+      setError(null);
+    }
 
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("image", scanFile);
 
     try {
       const response = await fetch("/api/scan", {
@@ -128,16 +140,25 @@ export default function ScanPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "解析に失敗しました。");
+        if (!silent) throw new Error(data.error || "解析に失敗しました。");
+        return; // Silent mode just ignores errors
       }
 
+      // Success!
+      if (silent) {
+        // Auto-detect! Stop camera first
+        stopCamera();
+        setFile(scanFile);
+        setPreviewUrl(URL.createObjectURL(scanFile));
+      }
       setParsedData(data.data);
     } catch (err: any) {
-      setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      clearInterval(progressInterval);
-      setLoading(false);
-      setProgress(100);
+      if (!silent) {
+        setLoading(false);
+        setProgress(100);
+      }
     }
   };
 
@@ -178,13 +199,15 @@ export default function ScanPage() {
                   <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-slate-300 rounded-bl-xl"></div>
                   <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-slate-300 rounded-br-xl"></div>
                   
-                  {/* Countdown Text */}
-                  {autoCaptureTimer !== null && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-400/10 backdrop-blur-[2px] rounded-2xl animate-pulse">
-                      <div className="text-4xl font-black text-white drop-shadow-lg">{autoCaptureTimer}</div>
-                      <div className="text-[10px] text-slate-200 font-bold uppercase tracking-[0.2em] mt-2">Auto Scanning...</div>
+                  {/* Scanning Status */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl pointer-events-none">
+                    <div className={`flex flex-col items-center transition-opacity duration-300 ${isScanning ? 'opacity-100' : 'opacity-40'}`}>
+                      <div className="w-12 h-12 border-4 border-slate-400/20 border-t-white rounded-full animate-spin mb-3" />
+                      <div className="text-[10px] text-white font-black uppercase tracking-[0.2em] px-3 py-1 bg-slate-900/40 backdrop-blur-md rounded-full">
+                        {isScanning ? "認識中..." : "スキャン待機中"}
+                      </div>
                     </div>
-                  )}
+                  </div>
 
                   <div className="absolute -bottom-12 left-0 right-0 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest py-1.5 bg-slate-900/60 backdrop-blur-md rounded-full border border-slate-700/50">
                     枠内に食券を合わせてください
