@@ -163,13 +163,60 @@ export async function POST(req: NextRequest) {
     // 5. 店舗名の確認 (偽造防止の基礎)
     const isStationValid = text.includes('北九州') || text.includes('高専') || text.includes('食堂');
 
+    // --- 座標情報の抽出 (画像上の位置を特定) ---
+    const detectedBoxes: any[] = [];
+    const fullAnnotation = visionData.responses[0].fullTextAnnotation;
+    
+    // ヘルパー: 特定の検索結果に一致するブロックの座標を探す
+    const findBoxFor = (label: string, value: string | number) => {
+      if (!fullAnnotation || !value) return;
+      const searchStr = String(value).replace(/[:\.\s]/g, '');
+      
+      for (const page of fullAnnotation.pages) {
+        for (const block of page.blocks) {
+          const blockText = block.paragraphs.map((p: any) => p.words.map((w: any) => w.symbols.map((s: any) => s.text).join('')).join('')).join('');
+          const cleanBlockText = blockText.replace(/[:\.\s]/g, '');
+          
+          if (cleanBlockText.includes(searchStr) || searchStr.includes(cleanBlockText)) {
+            const v = block.boundingBox.vertices;
+            // 座標をパーセンテージに変換 (0-100)
+            // Vision APIがwidth/heightを返さないため、verticesから算出
+            const xMin = Math.min(...v.map((p: any) => p.x || 0));
+            const yMin = Math.min(...v.map((p: any) => p.y || 0));
+            const xMax = Math.max(...v.map((p: any) => p.x || 0));
+            const yMax = Math.max(...v.map((p: any) => p.y || 0));
+            
+            // 画像の実際のサイズを取得（sharpなどで取得も可能だが、VisionAPIのverticesの最大値から推測）
+            // 通常は正規化された座標(0-1)を使うのが安全
+            detectedBoxes.push({
+              label,
+              x: xMin,
+              y: yMin,
+              w: xMax - xMin,
+              h: yMax - yMin,
+              // 正規化用：ページの幅・高さ
+              pageW: page.width,
+              pageH: page.height
+            });
+            break; 
+          }
+        }
+      }
+    };
+
+    findBoxFor("日付", extractedDate);
+    findBoxFor("時間", extractedTime);
+    findBoxFor("価格", extractedPrice);
+    findBoxFor("ID", finalHash);
+
     const extractedData = {
       date: extractedDate,
       time: extractedTime,
       price: extractedPrice,
       hash: finalHash,
       isVisionActive: true,
-      shopInfo: isStationValid ? "北九州高専 食堂" : "不明な店舗"
+      shopInfo: isStationValid ? "北九州高専 食堂" : "不明な店舗",
+      boxes: detectedBoxes
     };
 
     return NextResponse.json({ 

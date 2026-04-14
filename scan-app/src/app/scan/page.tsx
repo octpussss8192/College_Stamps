@@ -16,34 +16,6 @@ export default function ScanPage() {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // カメラ起動時の自動認識ループ (2秒おきにサイレントに解析)
-  useEffect(() => {
-    if (isCameraActive && !loading && !parsedData) {
-      scanIntervalRef.current = setInterval(() => {
-        autoCaptureAndScan();
-      }, 2000); // 2秒おきにチェック
-      
-      return () => {
-        if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-      };
-    } else {
-      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-    }
-  }, [isCameraActive, loading, parsedData]);
-
-  const autoCaptureAndScan = async () => {
-    if (!videoRef.current || loading || parsedData) return;
-    
-    setIsScanning(true);
-    const capturedBlob = await captureToBlob();
-    if (capturedBlob) {
-      const capturedFile = new File([capturedBlob], "auto-scan.jpg", { type: "image/jpeg" });
-      await performScan(capturedFile, true); // true = silent mode
-    }
-    setIsScanning(false);
-  };
 
   const captureToBlob = (): Promise<Blob | null> => {
     return new Promise((resolve) => {
@@ -120,18 +92,13 @@ export default function ScanPage() {
 
   const handleScan = async () => {
     if (!file) return;
-    await performScan(file, false);
-  };
 
-  const performScan = async (scanFile: File, silent: boolean) => {
-    if (!silent) {
-      setLoading(true);
-      setProgress(0);
-      setError(null);
-    }
+    setLoading(true);
+    setProgress(0);
+    setError(null);
 
     const formData = new FormData();
-    formData.append("image", scanFile);
+    formData.append("image", file);
 
     try {
       const response = await fetch("/api/scan", {
@@ -141,25 +108,15 @@ export default function ScanPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        if (!silent) throw new Error(data.error || "解析に失敗しました。");
-        return; // Silent mode just ignores errors
+        throw new Error(data.error || "解析に失敗しました。");
       }
 
-      // Success!
-      if (silent) {
-        // Auto-detect! Stop camera first
-        stopCamera();
-        setFile(scanFile);
-        setPreviewUrl(URL.createObjectURL(scanFile));
-      }
       setParsedData(data.data);
     } catch (err: any) {
-      if (!silent) setError(err.message);
+      setError(err.message);
     } finally {
-      if (!silent) {
-        setLoading(false);
-        setProgress(100);
-      }
+      setLoading(false);
+      setProgress(100);
     }
   };
 
@@ -200,18 +157,8 @@ export default function ScanPage() {
                   <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-slate-300 rounded-bl-xl"></div>
                   <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-slate-300 rounded-br-xl"></div>
                   
-                  {/* Scanning Status */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl pointer-events-none">
-                    <div className={`flex flex-col items-center transition-opacity duration-300 ${isScanning ? 'opacity-100' : 'opacity-40'}`}>
-                      <div className="w-12 h-12 border-4 border-slate-400/20 border-t-white rounded-full animate-spin mb-3" />
-                      <div className="text-[10px] text-white font-black uppercase tracking-[0.2em] px-3 py-1 bg-slate-900/40 backdrop-blur-md rounded-full">
-                        {isScanning ? "認識中..." : "スキャン待機中"}
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="absolute -bottom-12 left-0 right-0 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest py-1.5 bg-slate-900/60 backdrop-blur-md rounded-full border border-slate-700/50">
-                    枠内に食券を合わせてください
+                    撮影して解析を開始してください
                   </div>
                 </div>
               </div>
@@ -228,13 +175,33 @@ export default function ScanPage() {
                   onClick={capturePhoto}
                   className="w-20 h-20 bg-white rounded-full border-[6px] border-slate-300 shadow-[0_0_30px_rgba(255,255,255,0.4)] flex items-center justify-center active:scale-95 transition-transform"
                 >
-                  <div className="w-14 h-14 rounded-full border-2 border-slate-800"></div>
+                  {isScanning ? <Loader2 size={32} className="text-slate-800 animate-spin" /> : <div className="w-14 h-14 rounded-full border-2 border-slate-800"></div>}
                 </button>
                 <div className="w-14"></div> {/* Spacer */}
               </div>
             </div>
           ) : previewUrl ? (
-            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              
+              {/* OCR Bounding Boxes Highlight */}
+              {parsedData && parsedData.boxes && parsedData.boxes.map((box: any, idx: number) => (
+                <div 
+                  key={idx}
+                  className="absolute pointer-events-none border-2 border-red-500 bg-red-500/30 rounded-sm animate-in zoom-in-50 duration-500"
+                  style={{
+                    left: `${(box.x / box.pageW) * 100}%`,
+                    top: `${(box.y / box.pageH) * 100}%`,
+                    width: `${(box.w / box.pageW) * 100}%`,
+                    height: `${(box.h / box.pageH) * 100}%`,
+                  }}
+                >
+                  <span className="absolute -top-4 left-0 bg-red-600 text-[8px] text-white px-1 leading-tight font-bold rounded-t-xs">
+                    {box.label}
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-4 text-slate-500">
               <div 
