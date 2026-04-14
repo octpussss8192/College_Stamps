@@ -170,8 +170,8 @@ export default function ScanPage() {
                 {/* Dark Mask with Cutout */}
                 <div className="absolute inset-0 bg-slate-950/70 shadow-[inset_0_0_120px_rgba(0,0,0,0.8)]"></div>
                 
-                {/* Square Gray Guide */}
-                <div className="relative w-[75%] aspect-square border-2 border-slate-400/60 rounded-3xl bg-transparent z-10 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+                {/* Rectangular Gray Guide */}
+                <div className="relative w-[85%] aspect-[2/1] border-2 border-slate-400/60 rounded-2xl bg-transparent z-10 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
                   {/* Gray Corners */}
                   <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-slate-300 rounded-tl-xl"></div>
                   <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-slate-300 rounded-tr-xl"></div>
@@ -180,7 +180,7 @@ export default function ScanPage() {
                   
                   {/* Countdown Text */}
                   {autoCaptureTimer !== null && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-400/10 backdrop-blur-[2px] rounded-3xl animate-pulse">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-400/10 backdrop-blur-[2px] rounded-2xl animate-pulse">
                       <div className="text-4xl font-black text-white drop-shadow-lg">{autoCaptureTimer}</div>
                       <div className="text-[10px] text-slate-200 font-bold uppercase tracking-[0.2em] mt-2">Auto Scanning...</div>
                     </div>
