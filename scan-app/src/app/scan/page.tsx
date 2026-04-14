@@ -13,8 +13,32 @@ export default function ScanPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [autoCaptureTimer, setAutoCaptureTimer] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // カメラ起動時の自動シャッター制御
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isCameraActive && !loading && !parsedData) {
+      // 3秒後に自動撮影
+      timer = setTimeout(() => {
+        capturePhoto();
+      }, 3000);
+      setAutoCaptureTimer(3);
+      
+      // 秒読みカウントダウン（演出用）
+      const countdown = setInterval(() => {
+        setAutoCaptureTimer(prev => (prev && prev > 1 ? prev - 1 : null));
+      }, 1000);
+      
+      return () => {
+        clearTimeout(timer);
+        clearInterval(countdown);
+        setAutoCaptureTimer(null);
+      };
+    }
+  }, [isCameraActive, loading, parsedData]);
 
   const startCamera = async () => {
     try {
@@ -144,15 +168,25 @@ export default function ScanPage() {
               {/* Semi-transparent Guide Overlay */}
               <div className="absolute inset-0 flex items-center justify-center">
                 {/* Dark Mask with Cutout */}
-                <div className="absolute inset-0 bg-black/60 shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]"></div>
-                <div className="relative w-[85%] aspect-[2/1] border-2 border-blue-500/80 rounded-xl bg-transparent z-10 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
-                  {/* Corners */}
-                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-white rounded-tl-md"></div>
-                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-white rounded-tr-md"></div>
-                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-white rounded-bl-md"></div>
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-white rounded-br-md"></div>
+                <div className="absolute inset-0 bg-slate-950/70 shadow-[inset_0_0_120px_rgba(0,0,0,0.8)]"></div>
+                
+                {/* Square Gray Guide */}
+                <div className="relative w-[75%] aspect-square border-2 border-slate-400/60 rounded-3xl bg-transparent z-10 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+                  {/* Gray Corners */}
+                  <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-slate-300 rounded-tl-xl"></div>
+                  <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-slate-300 rounded-tr-xl"></div>
+                  <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-slate-300 rounded-bl-xl"></div>
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-slate-300 rounded-br-xl"></div>
                   
-                  <div className="absolute -top-8 left-0 right-0 text-center text-white text-[10px] font-bold uppercase tracking-widest py-1 bg-blue-600/20 backdrop-blur-sm rounded-full">
+                  {/* Countdown Text */}
+                  {autoCaptureTimer !== null && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-400/10 backdrop-blur-[2px] rounded-3xl animate-pulse">
+                      <div className="text-4xl font-black text-white drop-shadow-lg">{autoCaptureTimer}</div>
+                      <div className="text-[10px] text-slate-200 font-bold uppercase tracking-[0.2em] mt-2">Auto Scanning...</div>
+                    </div>
+                  )}
+
+                  <div className="absolute -bottom-12 left-0 right-0 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest py-1.5 bg-slate-900/60 backdrop-blur-md rounded-full border border-slate-700/50">
                     枠内に食券を合わせてください
                   </div>
                 </div>
