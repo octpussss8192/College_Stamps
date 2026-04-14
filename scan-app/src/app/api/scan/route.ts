@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 
 // ユーザーから提供されたAPIキー
 const GOOGLE_VISION_API_KEY = "AIzaSyA07pFgh_i_jZIAngMtHLw4dZyON2RoNsA";
@@ -16,6 +17,25 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     const base64Image = buffer.toString("base64");
     
+    // --- 【新機能】真贋判定：ピクセル統計解析 (sharpを使用) ---
+    try {
+      const stats = await sharp(buffer).stats();
+      const grayStats = stats.channels[0]; // グレースケール相当の統計
+      
+      console.log("[Scan-App] Image Stats - Stdev:", grayStats.stdev);
+
+      // デジタルデータの場合、背景が完全に均一（stdevが極めて小さい）になる
+      // 実写の場合、センサーノイズで必ず一定のばらつき(通常 5.0以上)が出る
+      if (grayStats.stdev < 1.0) {
+        return NextResponse.json({ 
+          error: "偽造の疑い：デジタル作成された画像（スクリーンショット等）の可能性があります。現物の食券をカメラで直接撮影してください。" 
+        }, { status: 400 });
+      }
+    } catch (sharpError) {
+      console.error("[Scan-App] Sharp Analysis Failed:", sharpError);
+      // 解析不能な場合も安全のためスルーするがログは残す
+    }
+
     let text = "";
 
     try {
@@ -53,6 +73,12 @@ export async function POST(req: NextRequest) {
         // これらが揃っていない場合は食券ではないと判断して早期リターン
         if (!hasSomeValidText || !hasDate || !hasTime) {
            throw new Error("有効な食券が確認できません。食券全体が写るように、明るい場所でもう一度撮影してください。");
+        }
+
+        // --- 【新機能】偽造検知：編集記号の検知 ---
+        const hasEditingMarks = text.includes('←') || text.includes('↵') || text.includes('←-') || text.includes('<-') || text.includes('^');
+        if (hasEditingMarks) {
+          throw new Error("偽造の疑い：デジタル編集記号（Word等）が検出されました。本物の食券を使用してください。");
         }
       } else {
         text = "";
@@ -125,6 +151,14 @@ export async function POST(req: NextRequest) {
       const isDatePart = extractedDate.includes(h);
       return !isPrice && !isDatePart;
     }) || (allCandidateIds.length > 0 ? allCandidateIds[0] : String(Math.floor(Math.random() * 900000) + 100000));
+
+    // --- 【新機能】偽造検知：ブラックリストID ---
+    const blacklistedIds = ["114514", "123456", "000000", "999999"];
+    if (blacklistedIds.includes(finalHash)) {
+       return NextResponse.json({ 
+         error: "偽造の疑い：この食券IDは無効です。本物の食券を使用してください。" 
+       }, { status: 400 });
+    }
 
     // 5. 店舗名の確認 (偽造防止の基礎)
     const isStationValid = text.includes('北九州') || text.includes('高専') || text.includes('食堂');
