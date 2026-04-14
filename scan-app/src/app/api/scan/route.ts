@@ -78,20 +78,34 @@ export async function POST(req: NextRequest) {
       extractedDate = new Date().toLocaleDateString('ja-JP').substring(2).replace(/\//g, '. ');
     }
 
-    // 2. 時刻の抽出 (例: 11:34)
-    const timePattern = /(\d{1,2})\s*[:：]\s*(\d{2})/;
-    const timeMatch = text.match(timePattern);
-    const extractedTime = timeMatch ? `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}` : new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    // 2. 時刻の抽出 (例: 11:42)
+    // 複数の時刻がある場合、「オーダーストップ」等のキーワードが含まれる行を除外して探す
+    const timePattern = /(\d{1,2})\s*[:：]\s*(\d{2})/g;
+    const allTimes = [...text.matchAll(timePattern)];
+    let extractedTime = "";
+    
+    if (allTimes.length > 0) {
+      // 「ーダーストップ」という単語が含まれる行の時刻を除外候補にする
+      const validTimes = allTimes.filter(match => {
+        const lineWithTime = lines.find(l => l.includes(match[0]));
+        return !lineWithTime?.includes('タップ') && !lineWithTime?.includes('トップ');
+      });
+      
+      const targetMatch = validTimes.length > 0 ? validTimes[validTimes.length - 1] : allTimes[allTimes.length - 1];
+      extractedTime = `${targetMatch[1].padStart(2, '0')}:${targetMatch[2]}`;
+    } else {
+      extractedTime = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    }
 
-    // 3. 価格の抽出 (例: ¥ 5 0 0)
-    // ¥記号の後の数字を、空白を飛ばして取得。大きい方を優先。
-    const priceMatches = text.match(/[¥￥]\s*([\d\s,]+)/g) || [];
+    // 3. 価格の抽出 (例: \ 5 0 0)
+    // ¥記号や\記号（誤認）の後の数字を取得。
+    const priceMatches = text.match(/[¥￥\\]\s*([\d\s,]+)/g) || [];
     let extractedPrice = 450;
     if (priceMatches.length > 0) {
       const prices = priceMatches.map(p => {
-        const val = p.replace(/[¥￥\s,]/g, '');
+        const val = p.replace(/[¥￥\\\s,]/g, '');
         return parseInt(val, 10);
-      }).filter(n => !isNaN(n));
+      }).filter(n => !isNaN(n) && n > 0);
       
       if (prices.length > 0) {
         // 最大の値を価格として採用（大きなフォントがメインである可能性が高いため）
