@@ -40,9 +40,15 @@ export async function initDb() {
         description TEXT,
         price INTEGER,
         is_today_special BOOLEAN DEFAULT false,
+        day_of_week VARCHAR(10),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+
+    // Migration: add day_of_week column if it doesn't exist
+    try {
+      await sql`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS day_of_week VARCHAR(10)`;
+    } catch (_) { /* column may already exist */ }
     console.log("Postgres database initialized successfully.");
   } catch (err) {
     console.error("Failed to initialize database:", err);

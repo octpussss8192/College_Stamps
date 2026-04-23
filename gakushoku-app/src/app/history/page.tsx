@@ -84,7 +84,7 @@ export default function HistoryPage() {
                     }`} />
                     
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                      <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
                         <Clock size={12} /> {record.date} {record.time}
                       </span>
                     </div>
@@ -93,8 +93,8 @@ export default function HistoryPage() {
                       <p className={`font-bold text-sm ${record.action.includes('特典') ? 'text-orange-600' : 'text-slate-800'}`}>
                         {record.action}
                       </p>
-                      {record.menu && <p className="text-xs text-slate-500 mt-1">{record.menu} {record.price ? `(¥${record.price})` : ''}</p>}
-                      {record.item && <p className="text-xs text-slate-500 mt-1">{record.item}</p>}
+                       {record.menu && <p className="text-xs text-slate-600 mt-1 font-medium">{record.menu} {record.price ? `(¥${record.price})` : ''}</p>}
+                       {record.item && <p className="text-xs text-slate-600 mt-1 font-medium">{record.item}</p>}
                     </div>
                   </div>
                 ))}

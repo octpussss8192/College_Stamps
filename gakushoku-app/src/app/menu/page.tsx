@@ -39,34 +39,44 @@ export default function MenuPage() {
               メニューがまだ登録されていません
             </div>
           ) : (
-            menus.map((menu) => (
+            menus.map((menu) => {
+              const DAY_NAMES = ['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
+              const todayName = DAY_NAMES[new Date().getDay()];
+              const isTodaySpecial = menu.day_of_week === todayName || (menu.is_today_special && !menu.day_of_week);
+              return (
               <div key={menu.id} className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 relative overflow-hidden">
-                {menu.is_today_special && (
+                {isTodaySpecial && (
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500"></div>
                 )}
                 <div className="flex justify-between items-start gap-4">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h2 className="text-lg font-bold text-slate-800">{menu.name}</h2>
-                      {menu.is_today_special && (
+                      {isTodaySpecial && (
                         <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Star size={10} /> 日替わり
+                          <Star size={10} /> 本日の日替わり
+                        </span>
+                      )}
+                      {menu.day_of_week && !isTodaySpecial && (
+                        <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {menu.day_of_week}
                         </span>
                       )}
                     </div>
                     {menu.description && (
-                      <p className="text-sm text-slate-500 text-balance mb-3">{menu.description}</p>
+                      <p className="text-sm text-slate-600 leading-relaxed mb-3">{menu.description}</p>
                     )}
                   </div>
                   {menu.price && (
                     <div className="shrink-0 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
-                      <p className="text-xs text-slate-400 font-bold mb-0.5">価格</p>
-                      <p className="text-lg font-bold text-slate-700">¥{menu.price}</p>
+                      <p className="text-xs text-slate-500 font-bold mb-0.5">価格</p>
+                      <p className="text-lg font-bold text-slate-800">¥{menu.price}</p>
                     </div>
                   )}
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

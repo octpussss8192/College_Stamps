@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Loader2, Fingerprint, Info, LogIn, UserPlus } from "lucide-react";
+import { Loader2, Fingerprint, Info, LogIn, UserPlus, Lock } from "lucide-react";
 
 export default function InitGuard({ children }: { children: React.ReactNode }) {
   const [appMode, setAppMode] = useState<'demo' | 'release' | null>(null);
@@ -13,6 +13,11 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const [showAdminAuth, setShowAdminAuth] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminAuthError, setAdminAuthError] = useState('');
+  const [adminAuthLoading, setAdminAuthLoading] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -134,18 +139,86 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
           </button>
 
           <button 
-            onClick={() => {
-              localStorage.setItem('app_mode', 'admin');
-              router.push('/admin');
-            }}
+            onClick={() => setShowAdminAuth(true)}
             className="w-full mt-4 bg-slate-800/50 border border-pink-500/30 hover:bg-pink-500/10 transition rounded-2xl p-4 flex gap-4 items-center justify-center text-center group"
           >
             <div className="text-pink-400">
-              <Info size={20} />
+              <Lock size={20} />
             </div>
             <h2 className="text-sm font-bold text-pink-400">管理者デバッグモード (Admin)</h2>
           </button>
         </div>
+
+        {/* Admin Password Overlay */}
+        {showAdminAuth && (
+          <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
+            <div className="w-full max-w-sm bg-slate-800 rounded-3xl p-8 border border-slate-700 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-pink-500/10 border border-pink-500/30 flex items-center justify-center mx-auto mb-4">
+                  <Lock size={28} className="text-pink-400" />
+                </div>
+                <h2 className="text-xl font-bold text-white">管理者認証</h2>
+                <p className="text-slate-400 text-xs mt-1">管理パスワードを入力してください</p>
+              </div>
+              
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setAdminAuthLoading(true);
+                setAdminAuthError('');
+                try {
+                  const res = await fetch('/api/admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
+                    body: JSON.stringify({ action: 'verifyPassword', password: adminPassword }),
+                  });
+                  const data = await res.json();
+                  if (data.valid) {
+                    sessionStorage.setItem('admin_password', adminPassword);
+                    localStorage.setItem('app_mode', 'admin');
+                    router.push('/admin');
+                  } else {
+                    setAdminAuthError('パスワードが正しくありません');
+                  }
+                } catch (err) {
+                  setAdminAuthError('認証中にエラーが発生しました');
+                } finally {
+                  setAdminAuthLoading(false);
+                }
+              }} className="flex flex-col gap-4">
+                <input 
+                  type="password"
+                  required
+                  autoFocus
+                  value={adminPassword}
+                  onChange={e => setAdminPassword(e.target.value)}
+                  placeholder="••••••••••"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-xl text-sm font-semibold text-white focus:ring-2 focus:ring-pink-500 outline-none transition placeholder:text-slate-500"
+                />
+                
+                {adminAuthError && (
+                  <p className="text-red-400 text-xs font-semibold text-center">{adminAuthError}</p>
+                )}
+                
+                <button 
+                  type="submit"
+                  disabled={adminAuthLoading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold hover:from-pink-600 hover:to-rose-600 transition shadow-lg shadow-pink-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {adminAuthLoading ? <Loader2 size={18} className="animate-spin" /> : <Lock size={16} />}
+                  認証する
+                </button>
+              </form>
+              
+              <button
+                type="button"
+                onClick={() => { setShowAdminAuth(false); setAdminPassword(''); setAdminAuthError(''); }}
+                className="w-full mt-3 text-slate-500 text-xs hover:text-slate-300 transition text-center"
+              >
+                ← 戻る
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

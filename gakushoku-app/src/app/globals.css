@@ -13,7 +13,7 @@
 @layer base {
   body {
     -webkit-tap-highlight-color: transparent;
-    @apply antialiased bg-slate-50 text-slate-900;
+    @apply antialiased bg-white text-slate-900;
   }
 }
 
