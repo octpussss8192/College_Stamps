@@ -105,11 +105,11 @@ export async function POST(req: NextRequest) {
       }
 
       case "addMenu": {
-        const { name, description, price, isSpecial, dayOfWeek } = body;
+        const { name, description, price, isSpecial, dayOfWeek, imageUrl } = body;
         if (isSpecial) {
           await sql`UPDATE menu_items SET is_today_special = false WHERE day_of_week IS NULL`;
         }
-        await sql`INSERT INTO menu_items (name, description, price, is_today_special, day_of_week) VALUES (${name}, ${description || ''}, ${price ? Number(price) : null}, ${!!isSpecial}, ${dayOfWeek || null})`;
+        await sql`INSERT INTO menu_items (name, description, price, is_today_special, day_of_week, image_url) VALUES (${name}, ${description || ''}, ${price ? Number(price) : null}, ${!!isSpecial}, ${dayOfWeek || null}, ${imageUrl || null})`;
         return NextResponse.json({ success: true });
       }
 

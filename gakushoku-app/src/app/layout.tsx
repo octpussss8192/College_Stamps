@@ -34,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${inter.className} bg-white relative pb-20 max-w-md mx-auto min-h-[200vh] shadow-2xl`}>
+      <body className={`${inter.className} bg-white relative pb-20 max-w-md mx-auto min-h-screen shadow-2xl`}>
         {/* Header decoration */}
         <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-b-[40px] -z-10" />
         

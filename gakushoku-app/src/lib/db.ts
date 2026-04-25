@@ -45,9 +45,12 @@ export async function initDb() {
       );
     `;
 
-    // Migration: add day_of_week column if it doesn't exist
+    // Migration: add columns if they don't exist
     try {
       await sql`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS day_of_week VARCHAR(10)`;
+    } catch (_) { /* column may already exist */ }
+    try {
+      await sql`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_url VARCHAR(255)`;
     } catch (_) { /* column may already exist */ }
     console.log("Postgres database initialized successfully.");
   } catch (err) {

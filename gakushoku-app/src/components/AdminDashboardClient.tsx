@@ -50,7 +50,7 @@ export default function AdminDashboardClient() {
   );
 
   return (
-    <div className="min-h-[200vh] bg-white pb-24">
+    <div className="min-h-screen bg-white pb-24">
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 pt-12 rounded-b-[40px] shadow-lg mb-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
@@ -216,7 +216,14 @@ function MenuTab({ data, doAction, busy }: any) {
       <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden p-6">
         <h2 className="font-bold text-slate-800 flex items-center gap-2 mb-6"><Utensils size={20} className="text-amber-500" />メニュー追加</h2>
         <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget);
-          await doAction('addMenu', { name: fd.get('name'), description: fd.get('description'), price: fd.get('price'), isSpecial: fd.get('is_today_special') === 'true', dayOfWeek: fd.get('day_of_week') || null });
+          await doAction('addMenu', { 
+            name: fd.get('name'), 
+            description: fd.get('description'), 
+            price: fd.get('price'), 
+            isSpecial: fd.get('is_today_special') === 'true', 
+            dayOfWeek: fd.get('day_of_week') || null,
+            imageUrl: fd.get('image_url') || null
+          });
           (e.target as HTMLFormElement).reset();
         }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -227,9 +234,13 @@ function MenuTab({ data, doAction, busy }: any) {
             <label className="text-xs font-bold text-slate-500 ml-1">価格 (円)</label>
             <input type="number" name="price" placeholder="例: 450" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none" />
           </div>
-          <div className="md:col-span-2 space-y-2">
+          <div className="md:col-span-1 space-y-2">
             <label className="text-xs font-bold text-slate-500 ml-1">説明</label>
             <input type="text" name="description" placeholder="説明文を入力..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none" />
+          </div>
+          <div className="md:col-span-1 space-y-2">
+            <label className="text-xs font-bold text-slate-500 ml-1">画像パス (images/xxx.jpg)</label>
+            <input type="text" name="image_url" placeholder="例: images/curry.jpg" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none" />
           </div>
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 ml-1">曜日指定 (日替わり)</label>
