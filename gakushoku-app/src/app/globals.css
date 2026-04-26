@@ -31,9 +31,12 @@
   }
 }
 
-html,
+html {
+  min-height: 100%;
+  background-color: #f1f5f9; /* Background color for desktop view */
+}
+
 body {
-  height: 100%;
   padding: 0;
   margin: 0;
 }
