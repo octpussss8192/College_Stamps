@@ -52,6 +52,7 @@ export default function MenuPage() {
                 {/* Menu Image */}
                 <div className="aspect-[4/3] w-full bg-slate-100 relative overflow-hidden">
                   {menu.image_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img 
                       src={`/${menu.image_url}`} 
                       alt={menu.name}

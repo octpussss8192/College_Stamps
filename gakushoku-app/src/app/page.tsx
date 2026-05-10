@@ -1,12 +1,12 @@
 "use client";
-import { Award, User, Info, AlertCircle, Star } from 'lucide-react';
+import { Award, User, Info, AlertCircle, Star, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import NotificationCenter from '@/components/NotificationCenter';
 
 function DailyProgressChart({ count }: { count: number }) {
   const [animatedCount, setAnimatedCount] = useState(0);
   
   useEffect(() => {
-    // Small timeout to ensure animation is visible after mount
     const timer = setTimeout(() => {
       setAnimatedCount(count);
     }, 100);
@@ -33,7 +33,6 @@ function DailyProgressChart({ count }: { count: number }) {
       <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-12 -mt-12 z-0 opacity-50" />
       <div className="relative z-10 flex items-center justify-center">
         <svg className="w-52 h-52 transform -rotate-90 drop-shadow-sm">
-          {/* Outer glow/border shadow (subtle) */}
           <circle
             cx="104"
             cy="104"
@@ -42,7 +41,6 @@ function DailyProgressChart({ count }: { count: number }) {
             stroke="#F1F5F9"
             strokeWidth="1"
           />
-          {/* Main Track - Darker for better visibility */}
           <circle
             cx="104"
             cy="104"
@@ -51,7 +49,6 @@ function DailyProgressChart({ count }: { count: number }) {
             strokeWidth="14"
             fill="transparent"
           />
-          {/* Inner border (subtle) */}
           <circle
             cx="104"
             cy="104"
@@ -60,7 +57,6 @@ function DailyProgressChart({ count }: { count: number }) {
             stroke="#F1F5F9"
             strokeWidth="1"
           />
-          {/* Progress circle */}
           <circle
             cx="104"
             cy="104"
@@ -117,7 +113,7 @@ export default function Home() {
             }
           }
         } catch (e) {
-             console.error(e);
+          console.error(e);
         }
       } else {
         const savedStamps = localStorage.getItem('user_stamps');
@@ -145,7 +141,6 @@ export default function Home() {
     fetchUserData();
   }, []);
   
-  // Render dummy stamps
   const stamps = Array.from({ length: maxStamps }).map((_, i) => (
     <div key={i} className={i < currentStamps ? "stamp-filled" : "stamp-empty"}>
       {i < currentStamps ? <Award size={24} /> : <span className="text-slate-400 text-xs font-bold">{i + 1}</span>}
@@ -164,58 +159,61 @@ export default function Home() {
           </p>
         </div>
         
-        <div className="relative">
-          <button 
-            onClick={() => setShowAccountMenu(!showAccountMenu)}
-            className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 hover:bg-white/30 transition shadow-sm"
-          >
-            <User size={28} className="text-white" />
-          </button>
-          
-          {showAccountMenu && (
-            <div className="absolute top-16 right-0 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 p-5 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                  <User size={20} />
+        <div className="flex items-center">
+          <NotificationCenter />
+          <div className="relative">
+            <button 
+              onClick={() => setShowAccountMenu(!showAccountMenu)}
+              className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 hover:bg-white/30 transition shadow-sm"
+            >
+              <User size={28} className="text-white" />
+            </button>
+            
+            {showAccountMenu && (
+              <div className="absolute top-16 right-0 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 p-5 z-50 text-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <User size={20} />
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="font-bold text-slate-800 truncate">{nickname}</p>
+                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">メンバーアカウント</p>
+                  </div>
                 </div>
-                <div className="overflow-hidden">
-                  <p className="font-bold text-slate-800 truncate">{nickname}</p>
-                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">メンバーアカウント</p>
+                
+                <div className="space-y-3 mb-5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 text-xs font-bold">ユーザーID</span>
+                    <span className="text-sm font-mono font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{userId ?? 'GUEST'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 text-xs font-bold">登録日時</span>
+                    <span className="text-[11px] font-bold text-slate-700">{createdAt ?? 'ゲストアクセス'}</span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="space-y-3 mb-5">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 text-xs font-bold">ユーザーID</span>
-                  <span className="text-sm font-mono font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{userId ?? 'GUEST'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 text-xs font-bold">登録日時</span>
-                  <span className="text-[11px] font-bold text-slate-700">{createdAt ?? 'ゲストアクセス'}</span>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 gap-2">
-                <button 
-                  onClick={() => {
-                    fetch('/api/auth/me', { method: 'POST' }).then(() => {
-                      localStorage.removeItem('app_mode');
-                      window.location.reload();
-                    });
-                  }}
-                  className="w-full bg-slate-900 text-white hover:bg-slate-800 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
-                >
-                  ログアウト
-                </button>
-                <button 
-                  onClick={() => setShowAccountMenu(false)}
-                  className="w-full bg-white text-slate-500 hover:bg-slate-50 py-2.5 rounded-xl text-xs font-bold transition border border-slate-100"
-                >
-                  閉じる
-                </button>
+                <div className="grid grid-cols-1 gap-2">
+                  <button 
+                    onClick={() => {
+                      fetch('/api/auth/me', { method: 'POST' }).then(() => {
+                        localStorage.removeItem('app_mode');
+                        window.location.reload();
+                      });
+                    }}
+                    className="w-full bg-slate-900 text-white hover:bg-slate-800 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+                  >
+                    ログアウト
+                  </button>
+                  <button 
+                    onClick={() => setShowAccountMenu(false)}
+                    className="w-full bg-white text-slate-500 hover:bg-slate-50 py-2.5 rounded-xl text-xs font-bold transition border border-slate-100"
+                  >
+                    閉じる
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

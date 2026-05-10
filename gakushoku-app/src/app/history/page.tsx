@@ -50,6 +50,7 @@ export default function HistoryPage() {
     };
 
     fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalAmount = historyData.reduce((acc, curr) => acc + (curr.price || 0), 0);

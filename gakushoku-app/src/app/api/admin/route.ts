@@ -50,8 +50,14 @@ export async function GET(req: NextRequest) {
       }
 
       case "特典": {
-        const usersResult = await sql`SELECT id, nickname, stamps FROM users ORDER BY id DESC`;
-        return NextResponse.json({ users: usersResult.rows });
+        const usersResult = await sql`SELECT id, nickname, stamps, tickets FROM users ORDER BY id DESC`;
+        const winnersResult = await sql`
+          SELECT lw.*, u.nickname 
+          FROM lottery_winners lw 
+          JOIN users u ON lw.user_id = u.id 
+          ORDER BY lw.created_at DESC
+        `;
+        return NextResponse.json({ users: usersResult.rows, winners: winnersResult.rows });
       }
 
       case "履歴": {
@@ -78,6 +84,80 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     switch (action) {
+      case "runLottery": {
+        const date = new Date();
+        const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        
+        const existing = await sql`SELECT * FROM lottery_winners WHERE month = ${month}`;
+        if (existing.rows.length > 0) {
+          return NextResponse.json({ error: "今月の抽選は既に実行済みです" }, { status: 400 });
+        }
+
+        // Calculate winners
+        const hashesResult = await sql`
+          SELECT created_at, user_id
+          FROM used_hashes
+          WHERE TO_CHAR(created_at, 'YYYY-MM') = ${month}
+        `;
+        const daysMap = new Map<string, Set<number>>();
+        hashesResult.rows.forEach(r => {
+          const dStr = new Date(r.created_at).toISOString().split('T')[0];
+          if (!daysMap.has(dStr)) daysMap.set(dStr, new Set());
+          daysMap.get(dStr)!.add(r.user_id);
+        });
+
+        let extra = 0;
+        daysMap.forEach(usersSet => {
+          if (usersSet.size > 70) extra++;
+        });
+
+        const [yearStr, monthStr] = month.split('-');
+        const yearNum = Number(yearStr);
+        const monthNum = Number(monthStr);
+        const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateObj = new Date(yearNum, monthNum - 1, d);
+          if (dateObj.getDay() === 1) { // Monday
+            let allOver70 = true;
+            for (let i = 0; i < 5; i++) {
+              const checkDate = new Date(yearNum, monthNum - 1, d + i);
+              const dateStr = checkDate.toISOString().split('T')[0];
+              if (!daysMap.has(dateStr) || daysMap.get(dateStr)!.size <= 70) {
+                allOver70 = false;
+                break;
+              }
+            }
+            if (allOver70) extra++;
+          }
+        }
+
+        const winnersCount = Math.min(2 + extra, 5);
+
+        const eligibleResult = await sql`SELECT id, tickets FROM users WHERE tickets > 0`;
+        const pool: number[] = [];
+        eligibleResult.rows.forEach(u => {
+          for (let i = 0; i < u.tickets; i++) pool.push(u.id);
+        });
+
+        if (pool.length === 0) {
+          return NextResponse.json({ error: "抽選券を持っているユーザーがいません" }, { status: 400 });
+        }
+
+        const winners = new Set<number>();
+        let attempts = 0;
+        while (winners.size < winnersCount && winners.size < eligibleResult.rows.length && attempts < 1000) {
+          winners.add(pool[Math.floor(Math.random() * pool.length)]);
+          attempts++;
+        }
+
+        for (const wid of winners) {
+          await sql`INSERT INTO lottery_winners (month, user_id) VALUES (${month}, ${wid})`;
+        }
+        
+        await sql`UPDATE users SET tickets = 0`;
+        return NextResponse.json({ success: true, winners: Array.from(winners) });
+      }
+
       case "deleteUser": {
         const { id } = body;
         await sql`DELETE FROM history WHERE user_id = ${Number(id)}`;
@@ -114,8 +194,12 @@ export async function POST(req: NextRequest) {
       }
 
       case "updateStamps": {
-        const { userId, stamps } = body;
-        await sql`UPDATE users SET stamps = ${Number(stamps)} WHERE id = ${Number(userId)}`;
+        const { userId, stamps, tickets } = body;
+        if (tickets !== undefined) {
+          await sql`UPDATE users SET stamps = ${Number(stamps)}, tickets = ${Number(tickets)} WHERE id = ${Number(userId)}`;
+        } else {
+          await sql`UPDATE users SET stamps = ${Number(stamps)} WHERE id = ${Number(userId)}`;
+        }
         return NextResponse.json({ success: true });
       }
 

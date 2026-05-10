@@ -349,17 +349,50 @@ function RewardsTab({ data, searchTerm, doAction, busy }: any) {
                     <button disabled={busy} onClick={() => doAction('updateStamps', { userId: u.id, stamps: u.stamps + 1 })}
                       className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/30 flex items-center justify-center font-bold transition disabled:opacity-50">+</button>
                   </div>
+                  <div className="flex items-center gap-2 bg-white/5 rounded-xl px-2 py-1.5 border border-white/5 ml-2">
+                    <div className="flex flex-col items-center min-w-[2.5rem]">
+                      <span className="text-[10px] font-bold text-indigo-200">TICKETS</span>
+                      <span className="font-black text-lg">{u.tickets || 0}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button disabled={busy} onClick={() => doAction('updateStamps', { userId: u.id, stamps: u.stamps, tickets: (u.tickets || 0) + 1 })}
+                        className="w-6 h-4 rounded bg-white/10 hover:bg-white/30 flex items-center justify-center text-xs font-bold transition disabled:opacity-50">+</button>
+                      <button disabled={busy} onClick={() => doAction('updateStamps', { userId: u.id, stamps: u.stamps, tickets: Math.max(0, (u.tickets || 0) - 1) })}
+                        className="w-6 h-4 rounded bg-white/10 hover:bg-white/30 flex items-center justify-center text-xs font-bold transition disabled:opacity-50">-</button>
+                    </div>
+                  </div>
                 </div>
               ))
             }
           </div>
         </div>
       </div>
-      <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm text-center">
+      <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm text-center relative">
+        <button disabled={busy} onClick={() => { if(confirm('今月の抽選を実行しますか？（※チケットはリセットされます）')) doAction('runLottery', {}) }} className="absolute top-8 right-8 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:bg-indigo-700 transition disabled:opacity-50">
+          月間抽選を実行
+        </button>
         <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4"><Award size={32} /></div>
-        <h3 className="text-lg font-bold text-slate-800 mb-2">特典交換履歴</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-2">月間抽選・当選履歴</h3>
         <p className="text-sm text-slate-500 mb-6">スタンプ満了による特典交換の記録</p>
-        <div className="bg-slate-50 rounded-2xl p-12 text-slate-400 text-xs font-bold border border-dashed border-slate-200 uppercase tracking-widest">NO RECORDS</div>
+        
+        {(!data?.winners || data.winners.length === 0) ? (
+          <div className="bg-slate-50 rounded-2xl p-12 text-slate-400 text-xs font-bold border border-dashed border-slate-200 uppercase tracking-widest">NO RECORDS</div>
+        ) : (
+          <div className="text-left divide-y divide-slate-100">
+            {data.winners.map((w: any) => (
+              <div key={w.id} className="py-3 flex justify-between items-center">
+                <div>
+                  <span className="font-bold text-slate-800">{w.nickname}</span>
+                  <span className="text-xs text-slate-400 ml-2">ID: {w.user_id}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">{w.month} 当選</span>
+                  <p className="text-[10px] text-slate-400 mt-1">{new Date(w.created_at).toLocaleDateString('ja-JP')}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

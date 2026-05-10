@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const { rows } = await sql`SELECT id, nickname, stamps, created_at FROM users WHERE id = ${Number(sessionId)}`;
+    const { rows } = await sql`SELECT id, nickname, stamps, tickets, created_at FROM users WHERE id = ${Number(sessionId)}`;
     const user = rows[0];
 
     if (!user) {
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ 
       authenticated: true, 
-      user: { id: user.id, nickname: user.nickname, stamps: user.stamps, created_at: user.created_at } 
+      user: { id: user.id, nickname: user.nickname, stamps: user.stamps, tickets: user.tickets || 0, created_at: user.created_at } 
     });
   } catch (error) {
     console.error("Auth me Error:", error);

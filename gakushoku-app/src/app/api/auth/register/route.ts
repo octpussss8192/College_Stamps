@@ -4,10 +4,10 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { nickname, password } = await req.json();
+    const { nickname, password, secretWord } = await req.json();
 
-    if (!nickname || !password) {
-      return NextResponse.json({ error: "ニックネームとパスワードを入力してください。" }, { status: 400 });
+    if (!nickname || !password || !secretWord) {
+      return NextResponse.json({ error: "ニックネーム、パスワード、秘密の言葉を入力してください。" }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { rows } = await sql`
-      INSERT INTO users (nickname, password)
-      VALUES (${nickname}, ${hashedPassword})
+      INSERT INTO users (nickname, password, secret_word)
+      VALUES (${nickname}, ${hashedPassword}, ${secretWord})
       RETURNING id
     `;
     const userId = rows[0].id;

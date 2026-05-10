@@ -8,9 +8,11 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
   const [appMode, setAppMode] = useState<'demo' | 'release' | null>(null);
   const [isChecking, setIsChecking] = useState(true);
   
-  const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
+  const [showAuth, setShowAuth] = useState<'login' | 'register' | 'reset' | null>(null);
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
+  const [secretWord, setSecretWord] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -69,24 +71,44 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError('');
 
-    const endpoint = showAuth === 'login' ? '/api/auth/login' : '/api/auth/register';
+    let endpoint = '';
+    let body = {};
+
+    if (showAuth === 'login') {
+      endpoint = '/api/auth/login';
+      body = { nickname, password };
+    } else if (showAuth === 'register') {
+      endpoint = '/api/auth/register';
+      body = { nickname, password, secretWord };
+    } else if (showAuth === 'reset') {
+      endpoint = '/api/auth/reset-password';
+      body = { nickname, secretWord, newPassword };
+    }
 
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, password }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || '認証に失敗しました');
+        throw new Error(data.error || '処理に失敗しました');
       }
 
-      setShowAuth(null);
-      router.push('/');
-      router.refresh();
+      if (showAuth === 'reset') {
+        alert('パスワードを更新しました。新しいパスワードでログインしてください。');
+        setShowAuth('login');
+        setPassword('');
+        setNewPassword('');
+        setSecretWord('');
+      } else {
+        setShowAuth(null);
+        router.push('/');
+        router.refresh();
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -227,12 +249,14 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
   if (appMode === 'release' && showAuth) {
     return (
       <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col p-6 items-center justify-center">
-        <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-xl border border-slate-100 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
+        <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-xl border border-slate-100 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-8 duration-500 overflow-y-auto max-h-screen">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-slate-800">
-              {showAuth === 'login' ? 'ログイン' : 'ユーザー登録'}
+              {showAuth === 'login' ? 'ログイン' : showAuth === 'register' ? 'ユーザー登録' : 'パスワード再設定'}
             </h2>
-            <p className="text-slate-500 text-sm mt-1">リリース版を利用するには認証が必要です</p>
+            <p className="text-slate-500 text-sm mt-1">
+              {showAuth === 'reset' ? '秘密の言葉を入力してリセットしてください' : 'リリース版を利用するには認証が必要です'}
+            </p>
           </div>
 
           <form onSubmit={handleAuth} className="flex flex-col gap-4">
@@ -247,17 +271,61 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
               />
             </div>
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">パスワード</label>
-              <input 
-                type="password" 
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
-              />
-            </div>
+            
+            {(showAuth === 'login' || showAuth === 'register') && (
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">パスワード</label>
+                <input 
+                  type="password" 
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+            )}
+
+            {showAuth === 'register' && (
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1 block">秘密の言葉（再設定に使用）</label>
+                <input 
+                  type="text" 
+                  required
+                  value={secretWord}
+                  onChange={e => setSecretWord(e.target.value)}
+                  placeholder="例：好きな食べ物、出身小学校など"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
+                />
+              </div>
+            )}
+
+            {showAuth === 'reset' && (
+              <>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">秘密の言葉</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={secretWord}
+                    onChange={e => setSecretWord(e.target.value)}
+                    placeholder="登録した秘密の言葉"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">新しいパスワード</label>
+                  <input 
+                    type="password" 
+                    required
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+              </>
+            )}
 
             {error && (
               <p className="text-red-500 text-xs font-semibold text-center">{error}</p>
@@ -268,15 +336,28 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
               disabled={loading}
               className="mt-2 w-full py-3.5 px-4 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 disabled:opacity-50"
             >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : (showAuth === 'login' ? <LogIn size={18} /> : <UserPlus size={18} />)}
-              {showAuth === 'login' ? 'ログイン' : '登録する'}
+              {loading ? <Loader2 size={18} className="animate-spin" /> : (showAuth === 'login' ? <LogIn size={18} /> : showAuth === 'register' ? <UserPlus size={18} /> : <Lock size={18} />)}
+              {showAuth === 'login' ? 'ログイン' : showAuth === 'register' ? '登録する' : '再設定する'}
             </button>
           </form>
 
-          <div className="text-center mt-2">
+          <div className="flex flex-col gap-3 text-center mt-2">
+            {showAuth === 'login' && (
+              <button 
+                type="button"
+                onClick={() => { setShowAuth('reset'); setError(''); }}
+                className="text-slate-400 text-xs hover:underline"
+              >
+                パスワードを忘れましたか？
+              </button>
+            )}
+
             <button 
               type="button"
-              onClick={() => setShowAuth(showAuth === 'login' ? 'register' : 'login')}
+              onClick={() => {
+                setShowAuth(showAuth === 'login' ? 'register' : 'login');
+                setError('');
+              }}
               className="text-blue-600 text-sm font-semibold hover:underline"
             >
               {showAuth === 'login' ? 'アカウントを作成する' : 'すでにアカウントをお持ちの場合はログイン'}
@@ -289,6 +370,7 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
               localStorage.removeItem('app_mode');
               setAppMode(null);
               setShowAuth(null);
+              setError('');
             }}
             className="text-slate-400 text-xs mt-4 pt-4 border-t border-slate-100"
           >

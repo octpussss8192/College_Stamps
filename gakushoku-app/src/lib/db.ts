@@ -8,6 +8,8 @@ export async function initDb() {
         nickname VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         stamps INTEGER DEFAULT 0,
+        tickets INTEGER DEFAULT 0,
+        secret_word VARCHAR(255),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
@@ -45,12 +47,56 @@ export async function initDb() {
       );
     `;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS lottery_winners (
+        id SERIAL PRIMARY KEY,
+        month VARCHAR(7) NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS ticket_history (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        content TEXT,
+        type VARCHAR(50) DEFAULT 'info', -- 'info', 'success', 'warning', 'lottery'
+        is_global BOOLEAN DEFAULT true,
+        target_user_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS notification_reads (
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        notification_id INTEGER NOT NULL REFERENCES notifications(id),
+        read_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, notification_id)
+      );
+    `;
+
     // Migration: add columns if they don't exist
     try {
       await sql`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS day_of_week VARCHAR(10)`;
     } catch (_) { /* column may already exist */ }
     try {
       await sql`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_url VARCHAR(255)`;
+    } catch (_) { /* column may already exist */ }
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS tickets INTEGER DEFAULT 0`;
+    } catch (_) { /* column may already exist */ }
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS secret_word VARCHAR(255)`;
     } catch (_) { /* column may already exist */ }
     console.log("Postgres database initialized successfully.");
   } catch (err) {
