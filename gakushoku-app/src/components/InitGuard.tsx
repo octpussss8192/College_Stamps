@@ -11,6 +11,7 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
   const [showAuth, setShowAuth] = useState<'login' | 'register' | 'reset' | null>(null);
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [secretWord, setSecretWord] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -86,6 +87,12 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      if (showAuth === 'register' && password !== confirmPassword) {
+        setError('パスワードが一致しません');
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,7 +129,7 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
 
   if (isChecking) {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center">
         <Loader2 className="animate-spin text-blue-600" size={48} />
       </div>
     );
@@ -248,8 +255,8 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
   // Auth Screen (Release mode only)
   if (appMode === 'release' && showAuth) {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col p-6 items-center justify-center">
-        <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-xl border border-slate-100 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-8 duration-500 overflow-y-auto max-h-screen">
+      <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col p-6 items-center justify-center">
+        <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-xl border border-slate-100 flex flex-col gap-6 animate-in fade-in duration-300 overflow-y-auto max-h-screen">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-slate-800">
               {showAuth === 'login' ? 'ログイン' : showAuth === 'register' ? 'ユーザー登録' : 'パスワード再設定'}
@@ -287,17 +294,30 @@ export default function InitGuard({ children }: { children: React.ReactNode }) {
             )}
 
             {showAuth === 'register' && (
-              <div>
-                <label className="text-xs font-bold text-slate-500 mb-1 block">秘密の言葉（再設定に使用）</label>
-                <input 
-                  type="text" 
-                  required
-                  value={secretWord}
-                  onChange={e => setSecretWord(e.target.value)}
-                  placeholder="例：好きな食べ物、出身小学校など"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">パスワード（確認）</label>
+                  <input 
+                    type="password" 
+                    required
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-1 block">秘密の言葉（再設定に使用）</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={secretWord}
+                    onChange={e => setSecretWord(e.target.value)}
+                    placeholder="例：好きな食べ物、出身小学校など"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  />
+                </div>
+              </>
             )}
 
             {showAuth === 'reset' && (

@@ -137,8 +137,8 @@ export default function RewardsPage() {
         </div>
         <div className="flex items-center gap-2">
           <NotificationCenter />
-          <div className="text-right bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/20">
-            <p className="text-[10px] text-blue-100 uppercase font-bold tracking-widest mb-1">所持抽選券</p>
+          <div className="text-right bg-white/10 backdrop-blur-md p-3 px-4 rounded-2xl border border-white/20 min-w-[100px]">
+            <p className="text-[10px] text-blue-100 uppercase font-bold tracking-widest mb-1 whitespace-nowrap">所持抽選券</p>
             <p className="text-2xl font-black tabular-nums">{tickets}<span className="text-sm ml-1 font-bold">枚</span></p>
           </div>
         </div>
