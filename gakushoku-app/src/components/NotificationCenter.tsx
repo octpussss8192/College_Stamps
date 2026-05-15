@@ -11,12 +11,14 @@ export default function NotificationCenter() {
   const fetchNotifications = async () => {
     try {
       const res = await fetch('/api/notifications');
-      const data = await res.json();
-      if (data.notifications) {
-        setNotifications(data.notifications);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.notifications) {
+          setNotifications(data.notifications);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Notifications fetch failed:", err);
     } finally {
       setLoading(false);
     }

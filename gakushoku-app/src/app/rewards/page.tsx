@@ -149,16 +149,19 @@ export default function RewardsPage() {
         <div className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[42px] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
           <div className="relative bg-white rounded-[40px] overflow-hidden shadow-2xl border border-slate-100 flex flex-col items-center">
-            <div className="w-full aspect-[16/10] bg-slate-100 relative overflow-hidden">
-              <img 
-                src="/lottery-banner.png" 
-                alt="Lottery Banner" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-              <div className="absolute bottom-6 left-8">
-                <h2 className="text-white text-2xl font-black tracking-tight">{lotteryReward.title}</h2>
-                <p className="text-blue-100 text-xs font-medium mt-1">{lotteryReward.description}</p>
+            {/* Image Container with padding and internal rounding */}
+            <div className="p-4 w-full">
+              <div className="relative aspect-[16/9] rounded-[32px] overflow-hidden bg-slate-100 shadow-inner group-hover:shadow-md transition-shadow">
+                <img 
+                  src="/lottery-banner.png" 
+                  alt="Lottery Banner" 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                <div className="absolute bottom-6 left-6 right-6">
+                  <h2 className="text-white text-2xl font-black tracking-tight leading-tight">{lotteryReward.title}</h2>
+                  <p className="text-blue-100 text-[11px] font-bold mt-1 opacity-90">{lotteryReward.description}</p>
+                </div>
               </div>
             </div>
 

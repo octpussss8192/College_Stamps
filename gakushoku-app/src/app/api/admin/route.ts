@@ -43,12 +43,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ menus: menusResult.rows });
       }
 
-      case "スキャン": {
-        const hashesResult = await sql`SELECT * FROM used_hashes ORDER BY created_at DESC LIMIT 100`;
-        const usersResult = await sql`SELECT id, nickname FROM users ORDER BY id DESC`;
-        return NextResponse.json({ hashes: hashesResult.rows, users: usersResult.rows });
-      }
-
       case "特典": {
         const usersResult = await sql`SELECT id, nickname, stamps, tickets FROM users ORDER BY id DESC`;
         const winnersResult = await sql`
@@ -63,6 +57,12 @@ export async function GET(req: NextRequest) {
       case "履歴": {
         const historyResult = await sql`SELECT * FROM history ORDER BY created_at DESC LIMIT 100`;
         return NextResponse.json({ history: historyResult.rows });
+      }
+
+      case "食券ログ": {
+        const submissions = await sql`SELECT * FROM ticket_submissions ORDER BY created_at DESC LIMIT 100`;
+        const users = await sql`SELECT id, nickname FROM users ORDER BY id DESC`;
+        return NextResponse.json({ submissions: submissions.rows, users: users.rows });
       }
 
       default:
@@ -84,6 +84,56 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     switch (action) {
+      case "importTicketLogs": {
+        const { csv } = body;
+        if (!csv) return NextResponse.json({ error: "CSVデータがありません" }, { status: 400 });
+
+        const lines = csv.split('\n');
+        let importedCount = 0;
+
+        for (const line of lines) {
+          const [mId, tNum, tAt] = line.split(',').map(s => s.trim());
+          if (!mId || !tNum || !tAt) continue;
+
+          try {
+            await sql`
+              INSERT INTO ticket_machine_logs (machine_id, ticket_number, ticket_at)
+              VALUES (${Number(mId)}, ${Number(tNum)}, ${tAt})
+              ON CONFLICT (machine_id, ticket_number, ticket_at) DO NOTHING
+            `;
+            importedCount++;
+          } catch (e) {
+            console.warn("Skip log line error:", e);
+          }
+        }
+
+        // Run Verification
+        const pendingSubmissions = await sql`SELECT * FROM ticket_submissions WHERE status = 'pending'`;
+        for (const sub of pendingSubmissions.rows) {
+          const match = await sql`
+            SELECT id FROM ticket_machine_logs 
+            WHERE machine_id = ${sub.machine_id} AND ticket_number = ${sub.ticket_number}
+          `;
+          if (match.rowCount && match.rowCount > 0) {
+            await sql`UPDATE ticket_submissions SET status = 'verified' WHERE id = ${sub.id}`;
+          } else {
+            // If it's been more than 24 hours and still no match, mark as invalid
+            const ageHours = (new Date().getTime() - new Date(sub.created_at).getTime()) / (1000 * 60 * 60);
+            if (ageHours > 24) {
+              await sql`UPDATE ticket_submissions SET status = 'invalid' WHERE id = ${sub.id}`;
+            }
+          }
+        }
+
+        return NextResponse.json({ success: true, message: `${importedCount}件インポートしました。照合を完了しました。` });
+      }
+
+      case "deleteSubmission": {
+        const { id } = body;
+        await sql`DELETE FROM ticket_submissions WHERE id = ${Number(id)}`;
+        return NextResponse.json({ success: true });
+      }
+
       case "runLottery": {
         const date = new Date();
         const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -166,15 +216,30 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
-      case "deleteHash": {
-        const { hash } = body;
-        await sql`DELETE FROM used_hashes WHERE hash = ${hash}`;
-        return NextResponse.json({ success: true });
-      }
+      case "addSubmissionManual": {
+        const { machine_id, ticket_number, user_id } = body;
+        const mId = Number(machine_id);
+        const tNum = Number(ticket_number);
+        const uId = Number(user_id);
 
-      case "addHash": {
-        const { hash, userId } = body;
-        await sql`INSERT INTO used_hashes (hash, user_id) VALUES (${hash}, ${Number(userId)})`;
+        // 1. Register submission as verified
+        await sql`
+          INSERT INTO ticket_submissions (user_id, machine_id, ticket_number, status)
+          VALUES (${uId}, ${mId}, ${tNum}, 'verified')
+        `;
+
+        // 2. Update history and user stamps
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
+
+        await sql`
+          INSERT INTO history (user_id, date, time, price, hash) 
+          VALUES (${uId}, ${dateStr}, ${timeStr}, 0, ${`MANUAL-${mId}-${tNum}`})
+        `;
+        
+        await sql`UPDATE users SET stamps = stamps + 1 WHERE id = ${uId}`;
+        
         return NextResponse.json({ success: true });
       }
 

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KOSEN Cafeteria Ticket Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Noto+Sans+JP:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --danger: #f43f5e;
+            --bg: #0f172a;
+            --panel: rgba(15, 23, 42, 0.8);
+            --guide: rgba(244, 63, 94, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+            background: var(--bg);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #ticket-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            width: 90vw;
+            height: calc(90vw * 860 / 1700);
+            max-width: 850px;
+            max-height: calc(850px * 860 / 1700);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 12px;
+            box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .guide-box {
+            position: absolute;
+            border: 1px solid var(--guide);
+            background: rgba(244, 63, 94, 0.05);
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .guide-box.active {
+            border: 2px solid var(--success);
+            background: rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 15px var(--success);
+        }
+
+        .guide-label {
+            position: absolute;
+            top: -14px;
+            left: 0;
+            font-size: 8px;
+            background: var(--guide);
+            color: white;
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+
+        #ui-layer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(to top, var(--bg) 0%, transparent 100%);
+            z-index: 10;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .res-item { display: flex; flex-direction: column; }
+        .res-label { font-size: 10px; color: #94a3b8; margin-bottom: 2px; }
+        .res-val {
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--success);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            min-height: 24px;
+        }
+
+        .status-bar { text-align: center; margin-top: 15px; font-size: 12px; color: #94a3b8; }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #debug-canvas { display: none; }
+    </style>
+</head>
+
+<body>
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>エンジン起動中...</p>
+    </div>
+
+    <div id="video-container">
+        <video id="video" autoplay playsinline muted></video>
+        <div id="overlay">
+            <div id="ticket-frame"></div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div class="results-grid">
+            <div class="res-item"><span class="res-label">日付 (YY.MM.DD)</span><span id="res-date" class="res-val">--.--.--</span></div>
+            <div class="res-item"><span class="res-label">通し番号</span><span id="res-id" class="res-val">------</span></div>
+            <div class="res-item"><span class="res-label">金額(大)</span><span id="res-price-large" class="res-val">￥---</span></div>
+            <div class="res-item"><span class="res-label">金額(小)</span><span id="res-price-small" class="res-val">￥---</span></div>
+            <div class="res-item"><span class="res-label">時刻</span><span id="res-time" class="res-val">--:--</span></div>
+            <div class="res-item"><span class="res-label">場所</span><span id="res-location" class="res-val">----</span></div>
+        </div>
+        <div class="status-bar" id="status">起動しています...</div>
+    </div>
+
+    <canvas id="debug-canvas"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const ticketFrame = document.getElementById('ticket-frame');
+        const status = document.getElementById('status');
+        const loading = document.getElementById('loading');
+        const debugCanvas = document.getElementById('debug-canvas');
+        const debugCtx = debugCanvas.getContext('2d', { willReadFrequently: true });
+
+        const resultHistory = { date: [], id: [], priceLarge: [], priceSmall: [], time: [], location: [] };
+        const HISTORY_LIMIT = 5;
+
+        const layouts = {
+            date: { 
+                top: 0, left: 0, width: 40, height: 20, label: '日付', type: 'num', 
+                whitelist: '0123456789.- ', format: /^\d{2}\.[-.\d]{2}\.\d{2}$/,
+                scale: 4, dilate: true 
+            },
+            id: { 
+                top: 0, left: 65, width: 35, height: 20, label: '通し番号', type: 'num', 
+                whitelist: '0123456789', format: /^\d{4,8}$/,
+                scale: 4, dilate: true 
+            },
+            priceLarge: { 
+                top: 30, left: 35, width: 60, height: 40, label: '金額(大)', type: 'num', 
+                whitelist: '0123456789￥', format: /\d{2,4}/,
+                scale: 4, dilate: true 
+            },
+            priceSmall: { 
+                top: 65, left: 75, width: 25, height: 25, label: '金額(小)', type: 'num', 
+                whitelist: '0123456789￥', format: /\d{2,4}/,
+                scale: 5, dilate: false 
+            },
+            time: { 
+                top: 72, left: 0, width: 20, height: 20, label: '時刻', type: 'num', 
+                whitelist: '0123456789:', format: /^\d{1,2}:\d{2}$/,
+                scale: 4, dilate: true 
+            },
+            location: { 
+                top: 77, left: 30, width: 45, height: 23, label: '場所', type: 'text',
+                whitelist: '北九州高専食堂', format: /.{2,}/,
+                scale: 4, dilate: false 
+            }
+        };
+
+        const resultElems = {
+            date: document.getElementById('res-date'), id: document.getElementById('res-id'), 
+            priceLarge: document.getElementById('res-price-large'), priceSmall: document.getElementById('res-price-small'),
+            time: document.getElementById('res-time'), location: document.getElementById('res-location')
+        };
+
+        let worker;
+
+        async function init() {
+            const loadingText = document.querySelector('#loading p');
+            try {
+                worker = await Tesseract.createWorker('jpn+eng', 1, {
+                    logger: m => {
+                        if (m.status === 'downloading tesseract core' || m.status.includes('loading')) {
+                            const prog = Math.round(m.progress * 100);
+                            loadingText.innerText = `エンジン起動中: ${prog}%`;
+                        } else if (m.status === 'initializing api') {
+                            loadingText.innerText = `初期化中...`;
+                        }
+                    }
+                });
+                loading.style.display = 'none';
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => { setupGuides(); startProcessing(); };
+                status.innerText = 'スキャン中...';
+            } catch (err) {
+                loadingText.innerText = 'エラー：起動に失敗しました。';
+            }
+        }
+
+        function setupGuides() {
+            ticketFrame.innerHTML = '';
+            for (const key in layouts) {
+                const box = layouts[key];
+                const el = document.createElement('div');
+                el.className = 'guide-box'; el.id = `guide-${key}`;
+                el.style.top = box.top + '%'; el.style.left = box.left + '%';
+                el.style.width = box.width + '%'; el.style.height = box.height + '%';
+                const label = document.createElement('span');
+                label.className = 'guide-label'; label.innerText = box.label;
+                el.appendChild(label);
+                ticketFrame.appendChild(el);
+                box.el = el;
+            }
+        }
+
+        async function startProcessing() {
+            let currentKeyIndex = 0;
+            const keys = Object.keys(layouts);
+            const loop = async () => {
+                const key = keys[currentKeyIndex];
+                await processRegion(key, layouts[key]);
+                currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+                requestAnimationFrame(loop);
+            };
+            loop();
+        }
+
+        async function processRegion(key, config) {
+            if (!video.videoWidth) return;
+            const vw = video.videoWidth, vh = video.videoHeight;
+            const fRect = ticketFrame.getBoundingClientRect(), vRect = video.getBoundingClientRect();
+            const scaleX = vw / vRect.width, scaleY = vh / vRect.height;
+
+            const frameX = (fRect.left - vRect.left) * scaleX;
+            const frameY = (fRect.top - vRect.top) * scaleY;
+            const frameW = fRect.width * scaleX;
+            const frameH = fRect.height * scaleY;
+
+            const cropX = frameX + (config.left / 100) * frameW;
+            const cropY = frameY + (config.top / 100) * frameH;
+            const cropW = (config.width / 100) * frameW;
+            const cropH = (config.height / 100) * frameH;
+
+            const s = config.scale || 4;
+            const padding = 20;
+            debugCanvas.width = cropW * s + padding * 2;
+            debugCanvas.height = cropH * s + padding * 2;
+            
+            debugCtx.fillStyle = 'white';
+            debugCtx.fillRect(0, 0, debugCanvas.width, debugCanvas.height);
+            
+            debugCtx.filter = 'contrast(1.8) grayscale(1) brightness(1.1)'; 
+            debugCtx.drawImage(video, cropX, cropY, cropW, cropH, padding, padding, cropW * s, cropH * s);
+
+            const imgData = debugCtx.getImageData(0, 0, debugCanvas.width, debugCanvas.height);
+            const data = imgData.data;
+            let sum = 0;
+            for(let i=0; i<data.length; i+=4) sum += data[i];
+            const avgThreshold = sum / (data.length / 4) * 0.85;
+
+            const temp = new Uint8Array(data.length / 4);
+            for (let i = 0; i < data.length; i += 4) temp[i/4] = data[i] > avgThreshold ? 255 : 0;
+
+            if (config.dilate) {
+                const width = debugCanvas.width, height = debugCanvas.height;
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = y * width + x;
+                        if (temp[idx] === 0) {
+                            for(let dy=-1; dy<=1; dy++) {
+                                for(let dx=-1; dx<=1; dx++) {
+                                    const nIdx = ((y+dy) * width + (x+dx)) * 4;
+                                    data[nIdx] = data[nIdx+1] = data[nIdx+2] = 0;
+                }}}}}
+            } else {
+                for (let i = 0; i < temp.length; i++) {
+                    const v = temp[i];
+                    data[i*4] = data[i*4+1] = data[i*4+2] = v;
+                }
+            }
+            debugCtx.putImageData(imgData, 0, 0);
+
+            const options = { 
+                tessedit_pageseg_mode: (key === 'priceSmall' || key === 'priceLarge') ? Tesseract.PSM.SINGLE_WORD : Tesseract.PSM.SINGLE_LINE, 
+                tessedit_char_whitelist: config.whitelist || undefined 
+            };
+
+            try {
+                const { data: { text } } = await worker.recognize(debugCanvas.toDataURL('image/png'), options);
+                let cleaned = text.trim().replace(/\s+/g, '');
+                
+                if (config.type === 'num' && (key.includes('price'))) {
+                    cleaned = cleaned.replace(/[^\d]/g, '');
+                }
+
+                if (cleaned && (config.format ? config.format.test(cleaned) : true)) {
+                    updateResultWithStability(key, cleaned, config);
+                }
+            } catch (e) {}
+        }
+
+        function updateResultWithStability(key, value, config) {
+            const history = resultHistory[key];
+            history.push(value);
+            if (history.length > HISTORY_LIMIT) history.shift();
+            const counts = {};
+            let maxCount = 0, mostFrequent = null;
+            for (const val of history) {
+                counts[val] = (counts[val] || 0) + 1;
+                if (counts[val] > maxCount) { maxCount = counts[val]; mostFrequent = val; }
+            }
+            if (maxCount >= 3) {
+                if (resultElems[key].innerText !== mostFrequent) {
+                    resultElems[key].innerText = mostFrequent;
+                    config.el.classList.add('active');
+                    setTimeout(() => config.el.classList.remove('active'), 500);
+                }
+            }
+        }
+        init();
+    </script>
+</body>
+</html>

@@ -103,9 +103,9 @@ export default function Home() {
           const res = await fetch('/api/auth/me');
           if (res.ok) {
             const data = await res.json();
-            if (data.authenticated) {
-              setCurrentStamps(data.user.stamps);
-              setNickname(data.user.nickname);
+            if (data && data.authenticated && data.user) {
+              setCurrentStamps(data.user.stamps || 0);
+              setNickname(data.user.nickname || '〇〇大学 学生');
               setUserId(data.user.id);
               if (data.user.created_at) {
                 setCreatedAt(new Date(data.user.created_at).toLocaleString('ja-JP'));
@@ -113,7 +113,7 @@ export default function Home() {
             }
           }
         } catch (e) {
-          console.error(e);
+          console.error("Auth fetch failed:", e);
         }
       } else {
         const savedStamps = localStorage.getItem('user_stamps');
@@ -126,15 +126,19 @@ export default function Home() {
       
       try {
         const menuRes = await fetch('/api/menu');
-        const menuData = await menuRes.json();
-        if (menuData.special) {
-          setTodaySpecial(menuData.special);
-        }
-        if (menuData.todayHashes !== undefined) {
-          setTodayHashes(menuData.todayHashes);
+        if (menuRes.ok) {
+          const menuData = await menuRes.json();
+          if (menuData) {
+            if (menuData.special) {
+              setTodaySpecial(menuData.special);
+            }
+            if (menuData.todayHashes !== undefined) {
+              setTodayHashes(Number(menuData.todayHashes));
+            }
+          }
         }
       } catch (e) {
-        console.error(e);
+        console.error("Menu fetch failed:", e);
       }
     };
     

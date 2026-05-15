@@ -51,33 +51,277 @@ export default function AdminDashboardClient() {
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 pt-12 rounded-b-[40px] shadow-lg mb-6">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">管理者デバッグ</h1>
-            <p className="text-slate-400 text-xs mt-1 font-medium uppercase tracking-widest">{activeTab} PANEL</p>
+      <div className="flex flex-col md:flex-row min-h-screen">
+        {/* Sidebar / Top Nav */}
+        <aside className="w-full md:w-64 bg-slate-900 text-white md:min-h-screen flex flex-col z-50">
+          <div className="p-6">
+            <h1 className="text-xl font-black tracking-tight">管理者デバッグ</h1>
+            <p className="text-slate-400 text-[10px] uppercase tracking-widest mt-1">Gakushoku Admin</p>
           </div>
-          <div className="flex gap-2">
-            <button onClick={loadTab} className="p-2.5 bg-white/10 border border-white/20 rounded-xl hover:bg-white/20 transition" title="Refresh"><RefreshCw size={18} /></button>
-            <Link href="/" className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm font-bold hover:bg-white/20 transition">アプリに戻る</Link>
+          
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto pb-24 md:pb-6">
+            {[
+              { label: 'ホーム', icon: Users },
+              { label: 'メニュー', icon: Utensils },
+              { label: '食券管理', icon: Clock, tab: '食券ログ' },
+              { label: '特典', icon: Award },
+              { label: '履歴', icon: Search },
+            ].map(({ label, icon: Icon, tab }) => {
+              const targetTab = tab || label;
+              return (
+                <Link 
+                  key={label}
+                  href={`/admin?tab=${targetTab}`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                    activeTab === targetTab 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon size={18} />
+                  {label}
+                </Link>
+              );
+            })}
+            
+            <div className="pt-6 mt-6 border-t border-white/10">
+              <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition">
+                <RefreshCw size={18} />
+                アプリに戻る
+              </Link>
+            </div>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 bg-slate-50 p-6 md:p-10">
+          <div className="max-w-6xl mx-auto">
+            <header className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800">{activeTab}</h2>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Management Panel</p>
+              </div>
+              <button onClick={loadTab} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition shadow-sm" title="Refresh">
+                <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+              </button>
+            </header>
+
+            {(activeTab === 'ホーム' || activeTab === 'スキャン' || activeTab === '特典') && (
+              <div className="relative mb-8">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <input type="text" placeholder="キーワードで検索..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
+              </div>
+            )}
+
+            {activeTab === 'ホーム' && <HomeTab data={data} searchTerm={searchTerm} doAction={doAction} busy={busy} />}
+            {activeTab === 'メニュー' && <MenuTab data={data} doAction={doAction} busy={busy} />}
+            {activeTab === '特典' && <RewardsTab data={data} searchTerm={searchTerm} doAction={doAction} busy={busy} />}
+            {activeTab === '履歴' && <HistoryTab data={data} />}
+            {activeTab === '食券ログ' && <TicketLogTab data={data} doAction={doAction} busy={busy} />}
           </div>
+        </main>
+      </div>
+
+      {/* Mobile-only Bottom Nav (as fallback or secondary) */}
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 px-4 py-3 flex justify-around items-center z-[100] shadow-2xl">
+        {[
+          { label: 'ホーム', icon: Users },
+          { label: 'スキャン', icon: Hash },
+          { label: 'ログ', icon: Clock, tab: '食券ログ' },
+        ].map(({ label, icon: Icon, tab }) => {
+          const targetTab = tab || label;
+          return (
+            <Link 
+              key={label}
+              href={`/admin?tab=${targetTab}`}
+              className={`flex flex-col items-center gap-1 transition-colors ${activeTab === targetTab ? 'text-blue-600' : 'text-slate-400'}`}
+            >
+              <Icon size={20} />
+              <span className="text-[10px] font-bold">{label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TicketLogTab({ data, doAction, busy }: any) {
+  const [csvContent, setCsvContent] = useState('');
+  const submissions = data?.submissions || [];
+  const users = data?.users || [];
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCsvContent(event.target?.result as string);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImport = async () => {
+    if (!csvContent) return;
+    await doAction('importTicketLogs', { csv: csvContent });
+    setCsvContent('');
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* CSV Import Section */}
+        <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden p-8 flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
+              <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600"><Plus size={20} /></div>
+              ログ・インポート
+            </h3>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded">CSV Sync</span>
+          </div>
+
+          <div className="flex-1 space-y-6">
+            <div className="p-10 border-2 border-dashed border-slate-200 rounded-[32px] text-center bg-slate-50/30 hover:bg-slate-50 hover:border-indigo-200 transition-all group">
+              <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" id="csv-upload" />
+              <label htmlFor="csv-upload" className="cursor-pointer flex flex-col items-center gap-4">
+                <div className="w-20 h-20 bg-white border border-slate-200 text-slate-300 rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition group-hover:text-indigo-400">
+                  <Search size={32} />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-slate-700">{csvContent ? 'ファイル読み込み完了' : 'CSVファイルを選択'}</p>
+                  <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">形式: 機番, 番号, 時刻<br/>(1, 183280, 2026-05-15 12:00)</p>
+                </div>
+              </label>
+            </div>
+            
+            <button 
+              disabled={busy || !csvContent} 
+              onClick={handleImport}
+              className="w-full py-4.5 bg-slate-900 text-white rounded-2xl font-black hover:bg-indigo-600 transition-all disabled:opacity-50 shadow-xl shadow-slate-900/10 flex items-center justify-center gap-3"
+            >
+              {busy ? <Loader2 className="animate-spin" size={20} /> : <RefreshCw size={20} />}
+              照合プロセスを実行
+            </button>
+          </div>
+        </div>
+
+        {/* Manual Registration Section */}
+        <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
+              <div className="p-2 bg-pink-50 rounded-xl text-pink-600"><Hash size={20} /></div>
+              手動スタンプ登録
+            </h3>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded">Manual Entry</span>
+          </div>
+
+          <form onSubmit={async (e) => { 
+            e.preventDefault(); 
+            const fd = new FormData(e.currentTarget);
+            await doAction('addSubmissionManual', { 
+              machine_id: fd.get('machine_id'),
+              ticket_number: fd.get('ticket_number'), 
+              user_id: fd.get('user_id') 
+            });
+            (e.target as HTMLFormElement).reset();
+          }} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">食券機番号</label>
+                <select required name="machine_id" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-pink-500 outline-none transition">
+                  <option value="1">1号機</option>
+                  <option value="2">2号機</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">通し番号</label>
+                <input required type="number" name="ticket_number" placeholder="183280" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-pink-500 outline-none transition" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">対象ユーザー</label>
+              <select required name="user_id" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-pink-500 outline-none transition">
+                <option value="">ユーザーを選択してください</option>
+                {users.map((u: any) => <option key={u.id} value={u.id}>{u.nickname} (ID:{u.id})</option>)}
+              </select>
+            </div>
+
+            <button type="submit" disabled={busy} className="w-full py-4.5 bg-pink-500 text-white rounded-2xl font-black hover:bg-pink-600 transition shadow-xl shadow-pink-500/20 disabled:opacity-50 flex items-center justify-center gap-3">
+              {busy ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+              即時登録を実行 (Verified)
+            </button>
+          </form>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4">
-        {(activeTab === 'ホーム' || activeTab === 'スキャン' || activeTab === '特典') && (
-          <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input type="text" placeholder="検索..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
+      {/* Submissions Queue */}
+      <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-slate-100 bg-slate-50/30 flex justify-between items-center">
+          <div>
+            <h2 className="font-black text-slate-800 text-lg">ユーザー投稿とステータス</h2>
+            <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Real-time Submission Queue</p>
           </div>
-        )}
-
-        {activeTab === 'ホーム' && <HomeTab data={data} searchTerm={searchTerm} doAction={doAction} busy={busy} />}
-        {activeTab === 'メニュー' && <MenuTab data={data} doAction={doAction} busy={busy} />}
-        {activeTab === 'スキャン' && <ScanTab data={data} doAction={doAction} busy={busy} />}
-        {activeTab === '特典' && <RewardsTab data={data} searchTerm={searchTerm} doAction={doAction} busy={busy} />}
-        {activeTab === '履歴' && <HistoryTab data={data} />}
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <th className="px-8 py-5">機番 / 食券番号</th>
+                <th className="px-8 py-5">投稿ユーザー</th>
+                <th className="px-8 py-5">日時</th>
+                <th className="px-8 py-5">ステータス</th>
+                <th className="px-8 py-5 text-right">管理操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {submissions.length === 0 ? (
+                <tr><td colSpan={5} className="px-8 py-24 text-center text-slate-400 font-bold">待機中の投稿はありません</td></tr>
+              ) : (
+                submissions.map((s: any) => (
+                  <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500">{s.machine_id}</div>
+                        <span className="font-mono font-black text-slate-800 text-lg">#{s.ticket_number}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-[10px] font-black">ID:{s.user_id}</div>
+                        <span className="font-bold text-slate-700">UID: {s.user_id}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-xs text-slate-500 font-bold">
+                      {new Date(s.created_at).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                        s.status === 'verified' ? 'bg-green-500 text-white' : 
+                        s.status === 'invalid' ? 'bg-red-500 text-white' : 
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {s.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <button 
+                        disabled={busy} 
+                        onClick={() => { if(confirm('この投稿を削除しますか？')) doAction('deleteSubmission', { id: s.id }) }} 
+                        className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition disabled:opacity-50"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -273,50 +517,6 @@ function MenuTab({ data, doAction, busy }: any) {
             <button disabled={busy} onClick={() => doAction('deleteMenu', { id: m.id })} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition opacity-0 group-hover:opacity-100 disabled:opacity-50"><Trash2 size={18} /></button>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ScanTab({ data, doAction, busy }: any) {
-  const hashes = data?.hashes || []; const users = data?.users || [];
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden p-6">
-        <h2 className="font-bold text-slate-800 flex items-center gap-2 mb-6"><Hash size={20} className="text-pink-500" />手動使用済み設定</h2>
-        <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget);
-          await doAction('addHash', { hash: fd.get('hash'), userId: fd.get('user_id') });
-          (e.target as HTMLFormElement).reset();
-        }} className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 space-y-2">
-            <label className="text-xs font-bold text-slate-500 ml-1">食券ハッシュ</label>
-            <input required type="text" name="hash" placeholder="例: 987654321" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-pink-500 outline-none" />
-          </div>
-          <div className="w-full md:w-64 space-y-2">
-            <label className="text-xs font-bold text-slate-500 ml-1">対象ユーザー</label>
-            <select required name="user_id" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-pink-500 outline-none">
-              <option value="">選択</option>
-              {users.map((u: any) => <option key={u.id} value={u.id}>{u.nickname} (ID:{u.id})</option>)}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button type="submit" disabled={busy} className="w-full md:w-auto px-8 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition shadow-lg shadow-pink-500/20 disabled:opacity-50">使用済みにする</button>
-          </div>
-        </form>
-      </div>
-      <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50"><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">使用済みハッシュ一覧</p></div>
-        <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
-          {hashes.map((h: any) => (
-            <div key={h.hash} className="p-4 flex items-center justify-between hover:bg-slate-50 transition">
-              <div>
-                <p className="font-mono font-bold text-slate-700 text-sm">{h.hash}</p>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">USER ID: {h.user_id} • {new Date(h.created_at).toLocaleString('ja-JP')}</p>
-              </div>
-              <button disabled={busy} onClick={() => doAction('deleteHash', { hash: h.hash })} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-50"><Trash2 size={16} /></button>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

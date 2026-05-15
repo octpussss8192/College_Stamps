@@ -6,6 +6,8 @@ import InitGuard from "@/components/InitGuard";
 
 import VersionBadge from "@/components/VersionBadge";
 
+import MainLayout from "@/components/MainLayout";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -34,20 +36,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={`${inter.className} bg-white relative pb-20 max-w-md mx-auto min-h-screen shadow-2xl`}>
-        {/* Header decoration */}
-        <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-b-[40px] z-0" />
-        
-        {/* Version Badge */}
-        <VersionBadge />
-        
-        <InitGuard>
-          <main className="relative z-10 w-full h-full min-h-screen">
-            {children}
-          </main>
-          
-          <BottomNavigation />
-        </InitGuard>
+      <body className={`${inter.className} bg-slate-100 min-h-screen`}>
+        <MainLayout>
+          {children}
+        </MainLayout>
       </body>
     </html>
   );
