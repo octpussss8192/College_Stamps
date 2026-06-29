@@ -1,42 +1,92 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #3b82f6; /* Blue 500 */
-  --color-primary-dark: #1d4ed8;
-  --color-accent: #10b981; /* Emerald 500 */
-  --color-background-start: #f8fafc;
-  --color-background-end: #e2e8f0;
+  --font-sans: var(--font-plus), sans-serif;
+  --font-dela: var(--font-dela), sans-serif;
+  --font-dot: var(--font-dot), monospace;
+
+  --color-cream: #FAF7F2;
+  --color-charcoal: #18181A;
+  --color-lime: #CCFF00;
+  --color-orange: #FF5E36;
+  --color-mint: #00F5A0;
+  --color-stamp: #FF3E3E;
   
-  --font-inter: 'Inter', sans-serif;
+  --color-primary: var(--color-orange);
+  --color-primary-dark: #D4421E;
+  --color-accent: var(--color-lime);
+  --color-background-start: #FAF7F2;
+  --color-background-end: #FAF7F2;
 }
 
 @layer base {
   body {
     -webkit-tap-highlight-color: transparent;
-    @apply antialiased bg-white text-slate-900;
+    @apply antialiased bg-cream text-charcoal;
   }
 }
 
 @layer utilities {
-  .glassmorphism {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  .neo-card {
+    @apply bg-white border-[3px] border-charcoal shadow-[4px_4px_0px_#18181A] rounded-[20px] transition-all duration-200;
   }
-  
+
+  .neo-card-hover:hover {
+    @apply -translate-x-[2px] -translate-y-[2px] shadow-[6px_6px_0px_#18181A];
+  }
+
+  .neo-btn {
+    @apply inline-flex items-center justify-center border-[3px] border-charcoal shadow-[4px_4px_0px_#18181A] rounded-2xl font-extrabold transition-all duration-150 cursor-pointer;
+  }
+
+  .neo-btn:hover {
+    @apply -translate-x-[1px] -translate-y-[1px] shadow-[5px_5px_0px_#18181A];
+  }
+
+  .neo-btn:active {
+    @apply translate-x-[2px] translate-y-[2px] shadow-[1px_1px_0px_#18181A];
+  }
+
+  .neo-btn-disabled {
+    @apply bg-slate-200 text-slate-400 border-slate-300 shadow-none transform-none cursor-not-allowed;
+  }
+
   .stamp-empty {
-    @apply w-12 h-12 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-100;
+    @apply w-12 h-12 rounded-full border-2 border-dashed border-charcoal/30 flex items-center justify-center bg-charcoal/5 font-dot text-slate-400 font-bold text-xs;
   }
   
   .stamp-filled {
-    @apply w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg transform transition-transform hover:scale-110 border border-blue-400;
+    @apply w-12 h-12 rounded-full flex items-center justify-center bg-white text-stamp border-[3px] border-stamp shadow-[inset_0_0_0_2px_rgba(255,62,62,0.1)] relative scale-105;
+    transform: rotate(-10deg);
+    animation: stamp-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+
+  .stamp-filled::after {
+    content: '';
+    @apply absolute inset-0 rounded-full pointer-events-none opacity-20;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+}
+
+@keyframes stamp-pop {
+  0% {
+    opacity: 0;
+    transform: rotate(15deg) scale(2);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-10deg) scale(1.05);
   }
 }
 
 html {
   min-height: 100%;
-  background-color: #f1f5f9; /* Background color for desktop view */
+  background-color: #F1EFE9; /* Paper grey/clay background for desktop view margins */
 }
 
 body {
   padding: 0;
   margin: 0;
 }
+

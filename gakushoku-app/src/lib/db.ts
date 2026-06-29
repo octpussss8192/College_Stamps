@@ -13,6 +13,12 @@ export async function initDb() {
         id SERIAL PRIMARY KEY,
         nickname VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_code VARCHAR(6),
+        verification_code_expires TIMESTAMP WITH TIME ZONE,
+        reset_password_code VARCHAR(6),
+        reset_password_code_expires TIMESTAMP WITH TIME ZONE,
         stamps INTEGER DEFAULT 0,
         tickets INTEGER DEFAULT 0,
         secret_word VARCHAR(255),
@@ -119,7 +125,13 @@ export async function initDb() {
       `ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS day_of_week VARCHAR(10)`,
       `ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_url VARCHAR(255)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS tickets INTEGER DEFAULT 0`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS secret_word VARCHAR(255)`
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS secret_word VARCHAR(255)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(6)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires TIMESTAMP WITH TIME ZONE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_code VARCHAR(6)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_code_expires TIMESTAMP WITH TIME ZONE`
     ];
 
     for (const m of migrations) {

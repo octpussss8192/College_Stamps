@@ -13,7 +13,7 @@ export default function VersionBadge() {
   return (
     <button
       onClick={resetMode}
-      className="absolute top-4 right-5 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/30 text-[10px] font-bold text-white shadow-sm z-40 hover:bg-white/30 transition cursor-pointer"
+      className="absolute top-4 right-5 bg-lime border-[2px] border-charcoal px-3 py-1 rounded-md text-[10px] font-bold font-dot text-charcoal shadow-[2px_2px_0px_#18181A] z-40 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#18181A] active:translate-y-0.5 active:shadow-[1px_1px_0px_#18181A] transition-all cursor-pointer rotate-[3deg]"
     >
       v0.1.0 (β)
     </button>

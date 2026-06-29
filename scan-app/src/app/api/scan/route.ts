@@ -146,12 +146,12 @@ export async function POST(req: NextRequest) {
     // 右上に配置されることが多い6桁の独立した数字
     const idPattern = /\b\d{6}\b/g;
     const allCandidateIds = text.match(idPattern) || [];
-    const finalHash = allCandidateIds.find(h => {
+    const finalHash = (allCandidateIds.find(h => {
       // 価格や日付に含まれているものは除外
       const isPrice = String(extractedPrice).includes(h);
       const isDatePart = extractedDate.includes(h);
       return !isPrice && !isDatePart;
-    }) || (allCandidateIds.length > 0 ? allCandidateIds[0] : String(Math.floor(Math.random() * 900000) + 100000));
+    }) || (allCandidateIds.length > 0 ? allCandidateIds[0] : String(Math.floor(Math.random() * 900000) + 100000))) as string;
 
     // --- 【新機能】偽造検知：ブラックリストID ---
     const blacklistedIds = ["114514", "123456", "000000", "999999"];

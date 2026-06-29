@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 
-const ADMIN_PASSWORD = "amagasaki_usb";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin";
 
 function checkAuth(req: NextRequest) {
   const authHeader = req.headers.get("x-admin-password");
@@ -85,14 +85,14 @@ export async function POST(req: NextRequest) {
 
     switch (action) {
       case "importTicketLogs": {
-        const { csv } = body;
+        const csv = body.csv as string;
         if (!csv) return NextResponse.json({ error: "CSVデータがありません" }, { status: 400 });
 
         const lines = csv.split('\n');
         let importedCount = 0;
 
         for (const line of lines) {
-          const [mId, tNum, tAt] = line.split(',').map(s => s.trim());
+          const [mId, tNum, tAt] = line.split(',').map((s: string) => s.trim());
           if (!mId || !tNum || !tAt) continue;
 
           try {

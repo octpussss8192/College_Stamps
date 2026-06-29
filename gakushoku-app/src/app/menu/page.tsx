@@ -17,25 +17,26 @@ export default function MenuPage() {
   }, []);
 
   return (
-    <div className="p-6 pt-12 pb-24 max-w-lg mx-auto">
+    <div className="p-6 pt-12 pb-24 max-w-lg mx-auto min-h-screen bg-cream border-x-[3px] border-charcoal">
+      {/* Menu Page Header */}
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 bg-white/20 backdrop-blur-md text-white rounded-2xl flex items-center justify-center border border-white/30">
-          <Utensils size={24} />
+        <div className="w-12 h-12 bg-white border-[2.5px] border-charcoal rounded-xl flex items-center justify-center shadow-[3px_3px_0px_#18181A] shrink-0 text-charcoal">
+          <Utensils size={22} />
         </div>
-        <div className="text-white">
-          <h1 className="text-2xl font-bold tracking-tight">メニュー</h1>
-          <p className="text-sm text-blue-100">学食の提供メニュー</p>
+        <div>
+          <h1 className="text-2xl font-dela tracking-tight text-charcoal leading-none">メニュー</h1>
+          <p className="text-[10px] text-charcoal/70 font-dot font-extrabold uppercase tracking-widest mt-1.5">TODAY'S SPECIAL & CLASSICS</p>
         </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="animate-spin text-white" size={32} />
+          <Loader2 className="animate-spin text-orange" size={36} strokeWidth={3} />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {menus.length === 0 ? (
-            <div className="col-span-2 text-center text-slate-400 bg-white rounded-3xl p-12 shadow-sm border border-slate-100">
+            <div className="col-span-2 text-center neo-card p-12 bg-white text-slate-400 font-dot font-bold">
               メニューがまだ登録されていません
             </div>
           ) : (
@@ -44,19 +45,19 @@ export default function MenuPage() {
               const todayName = DAY_NAMES[new Date().getDay()];
               const isTodaySpecial = menu.day_of_week === todayName || (menu.is_today_special && !menu.day_of_week);
               return (
-              <div key={menu.id} className="bg-white rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden flex flex-col">
+              <div key={menu.id} className="neo-card bg-white flex flex-col hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#18181A] transition-all duration-200 overflow-hidden">
                 {isTodaySpecial && (
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500 z-10"></div>
+                  <div className="h-1.5 w-full bg-orange"></div>
                 )}
                 
                 {/* Menu Image */}
-                <div className="aspect-[4/3] w-full bg-slate-100 relative overflow-hidden">
+                <div className="aspect-[4/3] w-full bg-[#FAF7F2] relative overflow-hidden border-b-[2px] border-charcoal/15">
                   {menu.image_url ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img 
                       src={`/${menu.image_url}`} 
                       alt={menu.name}
-                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300">
@@ -64,28 +65,27 @@ export default function MenuPage() {
                     </div>
                   )}
                   {isTodaySpecial && (
-                    <div className="absolute top-2 left-2 bg-amber-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-lime text-charcoal text-[9px] font-dela px-2.5 py-1 rounded-lg border-[1.5px] border-charcoal shadow-[1px_1px_0px_#18181A] flex items-center gap-1">
                       <Star size={10} fill="currentColor" /> 日替わり
                     </div>
                   )}
                 </div>
 
-                <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className="p-4 flex-1 flex flex-col justify-between bg-white">
                   <div>
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h2 className="text-sm font-bold text-slate-800 line-clamp-1">{menu.name}</h2>
-                    </div>
+                    <h2 className="text-xs font-dela text-charcoal line-clamp-1 mb-1">{menu.name}</h2>
                     {menu.day_of_week && !isTodaySpecial && (
-                      <p className="text-[10px] font-bold text-blue-500 mb-1">{menu.day_of_week}</p>
+                      <p className="text-[9px] font-dot font-extrabold text-blue-600 uppercase tracking-wider mb-1">{menu.day_of_week}</p>
                     )}
                     {menu.description && (
-                      <p className="text-[11px] text-slate-500 leading-tight mb-2 line-clamp-2">{menu.description}</p>
+                      <p className="text-[10px] text-slate-500 leading-tight mb-2 line-clamp-2 font-semibold">{menu.description}</p>
                     )}
                   </div>
                   
                   {menu.price && (
-                    <div className="mt-2 pt-2 border-t border-slate-50">
-                      <p className="text-xs font-black text-slate-800">¥{menu.price}</p>
+                    <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center font-dot">
+                      <span className="text-[8px] text-slate-400 font-extrabold uppercase">PRICE</span>
+                      <p className="text-xs font-black text-charcoal">¥{menu.price}</p>
                     </div>
                   )}
                 </div>

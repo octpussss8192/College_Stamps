@@ -1,14 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Dela_Gothic_One, DotGothic16, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import BottomNavigation from "@/components/BottomNavigation";
-import InitGuard from "@/components/InitGuard";
-
 import VersionBadge from "@/components/VersionBadge";
-
 import MainLayout from "@/components/MainLayout";
 
-const inter = Inter({ subsets: ["latin"] });
+const delaGothic = Dela_Gothic_One({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-dela",
+  display: "swap",
+});
+
+const dotGothic = DotGothic16({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-dot",
+  display: "swap",
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "工クオン_学食スタンプ",
@@ -35,8 +49,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
-      <body className={`${inter.className} bg-slate-100 min-h-screen`}>
+    <html lang="ja" className={`${plusJakarta.variable} ${delaGothic.variable} ${dotGothic.variable}`}>
+      <body className={`${plusJakarta.className} bg-[#FAF7F2] text-[#18181A] antialiased min-h-screen`}>
         <MainLayout>
           {children}
         </MainLayout>

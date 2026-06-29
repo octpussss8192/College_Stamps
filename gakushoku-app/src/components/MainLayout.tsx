@@ -10,7 +10,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   if (isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="min-h-screen bg-[#FAF7F2] text-charcoal">
         <VersionBadge />
         <main className="w-full h-full min-h-screen">
           {children}
@@ -20,9 +20,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="bg-white relative max-w-md mx-auto min-h-screen shadow-2xl overflow-x-hidden pb-20">
-      {/* Mobile Header decoration */}
-      <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-b-[40px] z-0" />
+    <div className="bg-cream relative max-w-md mx-auto min-h-screen border-x-[3px] border-charcoal shadow-[0_0_24px_rgba(24,24,26,0.15)] overflow-x-hidden pb-20">
+      {/* Retro Header solid banner */}
+      <div className="absolute top-0 left-0 right-0 h-40 bg-orange border-b-[3px] border-charcoal z-0 flex items-end p-6">
+        <div className="absolute inset-0 opacity-[0.08]" style={{
+          backgroundImage: 'radial-gradient(#18181A 2px, transparent 2px)',
+          backgroundSize: '12px 12px'
+        }} />
+      </div>
       
       <VersionBadge />
       
