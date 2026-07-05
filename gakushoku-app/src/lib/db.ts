@@ -1,4 +1,28 @@
-import { sql } from '@vercel/postgres';
+import { Pool, QueryResult, QueryResultRow } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+interface SqlQuery {
+  <T extends QueryResultRow = any>(strings: TemplateStringsArray, ...values: any[]): Promise<QueryResult<T>>;
+  query<T extends QueryResultRow = any>(text: string, params?: any[]): Promise<QueryResult<T>>;
+}
+
+const sqlFunc = async (strings: TemplateStringsArray, ...values: any[]) => {
+  let queryText = strings[0];
+  for (let i = 1; i < strings.length; i++) {
+    queryText += `$${i}` + strings[i];
+  }
+  return pool.query(queryText, values);
+};
+
+export const sql: SqlQuery = Object.assign(sqlFunc, {
+  query: (text: string, params?: any[]) => pool.query(text, params)
+});
 
 export async function initDb() {
   if (!process.env.POSTGRES_URL) {
