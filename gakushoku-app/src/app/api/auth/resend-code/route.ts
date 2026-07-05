@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
-import { sendVerificationEmail } from "@/lib/mail";
+import { sendVerificationEmail, isSmtpConfigured } from "@/lib/mail";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
 
     let user;
     if (userId) {
-      const { rows } = await sql`SELECT id, email, nickname FROM users WHERE id = ${Number(userId)}`;
+      const { rows } = await sql`SELECT id, email, nickname FROM users WHERE id = ${Number(userId)} AND deleted_at IS NULL`;
       user = rows[0];
     } else if (email) {
-      const { rows } = await sql`SELECT id, email, nickname FROM users WHERE email = ${email}`;
+      const { rows } = await sql`SELECT id, email, nickname FROM users WHERE email = ${email} AND deleted_at IS NULL`;
       user = rows[0];
     }
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     await sendVerificationEmail(user.email, verificationCode);
 
     const responsePayload: any = { success: true, email: user.email };
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !isSmtpConfigured()) {
       responsePayload.devCode = verificationCode;
     }
 

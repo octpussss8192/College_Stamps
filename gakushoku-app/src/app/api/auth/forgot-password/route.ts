@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
-import { sendPasswordResetEmail } from "@/lib/mail";
+import { sendPasswordResetEmail, isSmtpConfigured } from "@/lib/mail";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "メールアドレスを入力してください。" }, { status: 400 });
     }
 
-    const { rows } = await sql`SELECT id, email FROM users WHERE email = ${email}`;
+    const { rows } = await sql`SELECT id, email FROM users WHERE email = ${email} AND deleted_at IS NULL`;
     const user = rows[0];
 
     if (!user) {
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     await sendPasswordResetEmail(user.email, resetCode);
 
     const responsePayload: any = { success: true, email: user.email };
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !isSmtpConfigured()) {
       responsePayload.devCode = resetCode;
     }
 

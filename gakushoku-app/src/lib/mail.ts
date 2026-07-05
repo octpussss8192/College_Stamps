@@ -7,6 +7,10 @@ interface SendMailOptions {
   html: string;
 }
 
+export function isSmtpConfigured(): boolean {
+  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 export async function sendEmail({ to, subject, text, html }: SendMailOptions) {
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
@@ -15,7 +19,7 @@ export async function sendEmail({ to, subject, text, html }: SendMailOptions) {
   const from = process.env.SMTP_FROM || '"学食スタンプ" <no-reply@gakushoku-stamp.local>';
 
   // Check if SMTP is configured
-  if (host && user && pass) {
+  if (isSmtpConfigured()) {
     try {
       const transporter = nodemailer.createTransport({
         host,

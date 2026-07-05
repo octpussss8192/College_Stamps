@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { sendVerificationEmail } from "@/lib/mail";
+import { sendVerificationEmail, isSmtpConfigured } from "@/lib/mail";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const { rows } = await sql`
       SELECT id, nickname, email, password, email_verified 
       FROM users 
-      WHERE nickname = ${nickname} OR email = ${nickname}
+      WHERE (nickname = ${nickname} OR email = ${nickname}) AND deleted_at IS NULL
     `;
     const user = rows[0];
 
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         email: user.email 
       };
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && !isSmtpConfigured()) {
         responsePayload.devCode = verificationCode;
       }
 

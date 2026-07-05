@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
+import { sendEmail, isSmtpConfigured } from "@/lib/mail";
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin";
+
+// 20日以上前の論理削除ユーザーをクリーンアップする関数
+async function cleanupDeletedUsers() {
+  try {
+    const { rows: expiredUsers } = await sql`
+      SELECT id FROM users 
+      WHERE deleted_at < NOW() - INTERVAL '20 days'
+    `;
+    
+    for (const u of expiredUsers) {
+      await sql`DELETE FROM ticket_history WHERE user_id = ${u.id}`;
+      await sql`DELETE FROM ticket_submissions WHERE user_id = ${u.id}`;
+      await sql`DELETE FROM history WHERE user_id = ${u.id}`;
+      await sql`DELETE FROM used_hashes WHERE user_id = ${u.id}`;
+      await sql`DELETE FROM notification_reads WHERE user_id = ${u.id}`;
+      await sql`DELETE FROM lottery_winners WHERE user_id = ${u.id}`;
+      await sql`DELETE FROM users WHERE id = ${u.id}`;
+    }
+    if (expiredUsers.length > 0) {
+      console.log(`Cleaned up ${expiredUsers.length} expired users.`);
+    }
+  } catch (err) {
+    console.error("Cleanup deleted users failed:", err);
+  }
+}
 
 function checkAuth(req: NextRequest) {
   const authHeader = req.headers.get("x-admin-password");
@@ -13,12 +39,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // バックグラウンドで自動クリーンアップを走らせる
+  cleanupDeletedUsers().catch(err => console.error(err));
+
   const tab = req.nextUrl.searchParams.get("tab") || "ホーム";
 
   try {
     switch (tab) {
       case "ホーム": {
-        const usersResult = await sql`SELECT * FROM users ORDER BY id DESC`;
+        const activeUsers = await sql`SELECT * FROM users WHERE deleted_at IS NULL ORDER BY id DESC`;
+        const trashUsers = await sql`SELECT * FROM users WHERE deleted_at IS NOT NULL ORDER BY id DESC`;
         const countsResult = await sql`
           SELECT 
             (SELECT COUNT(*) FROM used_hashes) as hash_count,
@@ -27,9 +57,11 @@ export async function GET(req: NextRequest) {
             (SELECT COUNT(*) FROM history) as history_count
         `;
         return NextResponse.json({
-          users: usersResult.rows,
+          users: activeUsers.rows,
+          trashUsers: trashUsers.rows,
           counts: {
-            users: usersResult.rows.length,
+            users: activeUsers.rows.length,
+            trashUsers: trashUsers.rows.length,
             hashes: Number(countsResult.rows[0]?.hash_count || 0),
             today_hashes: Number(countsResult.rows[0]?.today_hash_count || 0),
             menus: Number(countsResult.rows[0]?.menu_count || 0),
@@ -44,7 +76,7 @@ export async function GET(req: NextRequest) {
       }
 
       case "特典": {
-        const usersResult = await sql`SELECT id, nickname, stamps, tickets FROM users ORDER BY id DESC`;
+        const usersResult = await sql`SELECT id, nickname, stamps, tickets FROM users WHERE deleted_at IS NULL ORDER BY id DESC`;
         const winnersResult = await sql`
           SELECT lw.*, u.nickname 
           FROM lottery_winners lw 
@@ -61,8 +93,62 @@ export async function GET(req: NextRequest) {
 
       case "食券ログ": {
         const submissions = await sql`SELECT * FROM ticket_submissions ORDER BY created_at DESC LIMIT 100`;
-        const users = await sql`SELECT id, nickname FROM users ORDER BY id DESC`;
+        const users = await sql`SELECT id, nickname FROM users WHERE deleted_at IS NULL ORDER BY id DESC`;
         return NextResponse.json({ submissions: submissions.rows, users: users.rows });
+      }
+
+      case "通知": {
+        const notifications = await sql`SELECT * FROM notifications ORDER BY created_at DESC LIMIT 50`;
+        return NextResponse.json({ notifications: notifications.rows });
+      }
+
+      case "レポート": {
+        // 日別食券機ログ件数（過去30日）
+        const dayLogs = await sql`
+          SELECT TO_CHAR(ticket_at, 'YYYY-MM-DD') as date, COUNT(*) as count 
+          FROM ticket_machine_logs 
+          WHERE ticket_at >= CURRENT_DATE - INTERVAL '30 days' 
+          GROUP BY TO_CHAR(ticket_at, 'YYYY-MM-DD') 
+          ORDER BY date ASC
+        `;
+        // 日別アプリ照合完了件数（過去30日）
+        const daySubmissions = await sql`
+          SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as date, COUNT(*) as count 
+          FROM ticket_submissions 
+          WHERE status = 'verified' AND created_at >= CURRENT_DATE - INTERVAL '30 days' 
+          GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD') 
+          ORDER BY date ASC
+        `;
+        // 月別食券機ログ件数（過去12ヶ月）
+        const monthLogs = await sql`
+          SELECT TO_CHAR(ticket_at, 'YYYY-MM') as month, COUNT(*) as count 
+          FROM ticket_machine_logs 
+          WHERE ticket_at >= CURRENT_DATE - INTERVAL '12 months' 
+          GROUP BY TO_CHAR(ticket_at, 'YYYY-MM') 
+          ORDER BY month ASC
+        `;
+        // 月別アプリ照合完了件数（過去12ヶ月）
+        const monthSubmissions = await sql`
+          SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count 
+          FROM ticket_submissions 
+          WHERE status = 'verified' AND created_at >= CURRENT_DATE - INTERVAL '12 months' 
+          GROUP BY TO_CHAR(created_at, 'YYYY-MM') 
+          ORDER BY month ASC
+        `;
+
+        return NextResponse.json({
+          dayLogs: dayLogs.rows,
+          daySubmissions: daySubmissions.rows,
+          monthLogs: monthLogs.rows,
+          monthSubmissions: monthSubmissions.rows
+        });
+      }
+
+      case "システム": {
+        return NextResponse.json({ 
+          smtpConfigured: isSmtpConfigured(),
+          smtpUser: process.env.SMTP_USER || null
+        });
       }
 
       default:
@@ -78,6 +164,9 @@ export async function POST(req: NextRequest) {
   if (!checkAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // バックグラウンドで自動クリーンアップを走らせる
+  cleanupDeletedUsers().catch(err => console.error(err));
 
   try {
     const body = await req.json();
@@ -183,7 +272,7 @@ export async function POST(req: NextRequest) {
 
         const winnersCount = Math.min(2 + extra, 5);
 
-        const eligibleResult = await sql`SELECT id, tickets FROM users WHERE tickets > 0`;
+        const eligibleResult = await sql`SELECT id, tickets FROM users WHERE tickets > 0 AND deleted_at IS NULL`;
         const pool: number[] = [];
         eligibleResult.rows.forEach(u => {
           for (let i = 0; i < u.tickets; i++) pool.push(u.id);
@@ -204,16 +293,36 @@ export async function POST(req: NextRequest) {
           await sql`INSERT INTO lottery_winners (month, user_id) VALUES (${month}, ${wid})`;
         }
         
-        await sql`UPDATE users SET tickets = 0`;
+        await sql`UPDATE users SET tickets = 0 WHERE deleted_at IS NULL`;
         return NextResponse.json({ success: true, winners: Array.from(winners) });
       }
 
       case "deleteUser": {
+        // 論理削除（ゴミ箱へ移動）
         const { id } = body;
-        await sql`DELETE FROM history WHERE user_id = ${Number(id)}`;
-        await sql`DELETE FROM used_hashes WHERE user_id = ${Number(id)}`;
-        await sql`DELETE FROM users WHERE id = ${Number(id)}`;
-        return NextResponse.json({ success: true });
+        await sql`UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ${Number(id)}`;
+        return NextResponse.json({ success: true, message: "ユーザーをゴミ箱に移動しました。" });
+      }
+
+      case "restoreUser": {
+        // 論理削除から復元
+        const { id } = body;
+        await sql`UPDATE users SET deleted_at = NULL WHERE id = ${Number(id)}`;
+        return NextResponse.json({ success: true, message: "ユーザーを復元しました。" });
+      }
+
+      case "forceDeleteUser": {
+        // 物理削除
+        const { id } = body;
+        const uId = Number(id);
+        await sql`DELETE FROM ticket_history WHERE user_id = ${uId}`;
+        await sql`DELETE FROM ticket_submissions WHERE user_id = ${uId}`;
+        await sql`DELETE FROM history WHERE user_id = ${uId}`;
+        await sql`DELETE FROM used_hashes WHERE user_id = ${uId}`;
+        await sql`DELETE FROM notification_reads WHERE user_id = ${uId}`;
+        await sql`DELETE FROM lottery_winners WHERE user_id = ${uId}`;
+        await sql`DELETE FROM users WHERE id = ${uId}`;
+        return NextResponse.json({ success: true, message: "ユーザーを完全に削除しました。" });
       }
 
       case "addSubmissionManual": {
@@ -266,6 +375,129 @@ export async function POST(req: NextRequest) {
           await sql`UPDATE users SET stamps = ${Number(stamps)} WHERE id = ${Number(userId)}`;
         }
         return NextResponse.json({ success: true });
+      }
+
+      case "updateStampsBulk": {
+        const { changes } = body;
+        if (!changes || !Array.isArray(changes)) {
+          return NextResponse.json({ error: "変更データが不正です。" }, { status: 400 });
+        }
+        for (const c of changes) {
+          await sql`
+            UPDATE users 
+            SET stamps = ${Number(c.stamps)}, tickets = ${Number(c.tickets)} 
+            WHERE id = ${Number(c.userId)}
+          `;
+        }
+        return NextResponse.json({ success: true, message: `${changes.length}件の変更を保存しました。` });
+      }
+
+      case "addNotification": {
+        const { title, content, type } = body;
+        if (!title || !content) return NextResponse.json({ error: "件名と内容を入力してください。" }, { status: 400 });
+        await sql`
+          INSERT INTO notifications (title, content, type, is_global)
+          VALUES (${title}, ${content}, ${type || 'info'}, true)
+        `;
+        return NextResponse.json({ success: true, message: "お知らせを配信しました。" });
+      }
+
+      case "deleteNotification": {
+        const { id } = body;
+        const nId = Number(id);
+        await sql`DELETE FROM notification_reads WHERE notification_id = ${nId}`;
+        await sql`DELETE FROM notifications WHERE id = ${nId}`;
+        return NextResponse.json({ success: true });
+      }
+
+      case "sendTestEmail": {
+        const { to } = body;
+        if (!to) return NextResponse.json({ error: "送信先メールアドレスを入力してください。" }, { status: 400 });
+        
+        const subject = "【学食スタンプ】デバッグ・テストメール";
+        const text = "このメールは管理者ダッシュボードから送信されたテストメールです。\n正常にSMTP接続が動作しています。";
+        const html = `
+          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 3px solid #18181A; border-radius: 12px; background-color: #FAF7F2;">
+            <h2 style="color: #FF5E36; text-align: center; font-size: 24px; border-bottom: 3px solid #18181A; padding-bottom: 10px;">学食スタンプ テストメール</h2>
+            <p>このメールは管理者ダッシュボードから送信されたデバッグ用のテストメールです。</p>
+            <div style="background-color: #00F5A0; border: 2px solid #18181A; border-radius: 8px; padding: 15px; text-align: center; margin: 20px 0; font-weight: bold; color: #18181A;">
+              SMTP送信テスト 成功
+            </div>
+            <p style="font-size: 11px; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px;">送信時刻: ${new Date().toLocaleString('ja-JP')}</p>
+          </div>
+        `;
+
+        const result = await sendEmail({ to, subject, text, html });
+        return NextResponse.json(result);
+      }
+
+      case "seedDummyData": {
+        // ダミーユーザーの生成
+        const checkUsers = await sql`SELECT id FROM users LIMIT 1`;
+        if (checkUsers.rowCount === 0) {
+          const dummyHash = "$2a$10$Q7eYh4oF2Uv9/VdDfsjYVem5C8B4l4vF0P9Vj.Bv9tq2J8P3S3GgK"; 
+          await sql`INSERT INTO users (nickname, email, password, secret_word, stamps, tickets, email_verified) VALUES ('テスト高専生', 'test-student@saba2saba.kosen', ${dummyHash}, 'ラーメン', 5, 2, true)`;
+          await sql`INSERT INTO users (nickname, email, password, secret_word, stamps, tickets, email_verified) VALUES ('学食マスター', 'master-student@saba2saba.kosen', ${dummyHash}, 'カレー', 18, 0, true)`;
+        }
+
+        // ダミーメニューの生成
+        const checkMenus = await sql`SELECT id FROM menu_items LIMIT 1`;
+        if (checkMenus.rowCount === 0) {
+          await sql`INSERT INTO menu_items (name, description, price, is_today_special, day_of_week) VALUES ('高専カレー', '定番の味、大盛り無料！', 380, false, null)`;
+          await sql`INSERT INTO menu_items (name, description, price, is_today_special, day_of_week) VALUES ('日替わり定食A', '本日は油淋鶏定食です！', 450, true, '月曜日')`;
+          await sql`INSERT INTO menu_items (name, description, price, is_today_special, day_of_week) VALUES ('日替わり定食B', '本日はハンバーグ定食！', 480, true, '水曜日')`;
+        }
+
+        // 過去30日分の食券機ダミーログおよび登録データのインプット
+        const checkLogs = await sql`SELECT id FROM ticket_machine_logs LIMIT 1`;
+        if (checkLogs.rowCount === 0) {
+          const now = new Date();
+          for (let i = 29; i >= 0; i--) {
+            const logDate = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+            const dateStr = logDate.toISOString().split('T')[0];
+            
+            const dailyLogsCount = Math.floor(Math.random() * 5) + 1;
+            for (let j = 0; j < dailyLogsCount; j++) {
+              const ticketNum = 183000 + Math.floor(Math.random() * 1000);
+              const hour = 11 + Math.floor(Math.random() * 2);
+              const min = Math.floor(Math.random() * 60);
+              const logTimeStr = `${dateStr} ${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:00`;
+              
+              await sql`
+                INSERT INTO ticket_machine_logs (machine_id, ticket_number, ticket_at)
+                VALUES (${Math.floor(Math.random() * 2) + 1}, ${ticketNum}, ${logTimeStr})
+                ON CONFLICT (machine_id, ticket_number, ticket_at) DO NOTHING
+              `;
+
+              if (Math.random() < 0.7) {
+                const users = await sql`SELECT id FROM users LIMIT 1`;
+                if (users.rowCount && users.rowCount > 0) {
+                  const uId = users.rows[0].id;
+                  await sql`
+                    INSERT INTO ticket_submissions (user_id, machine_id, ticket_number, status, created_at)
+                    VALUES (${uId}, ${Math.floor(Math.random() * 2) + 1}, ${ticketNum}, 'verified', ${logTimeStr})
+                  `;
+                }
+              }
+            }
+          }
+        }
+
+        return NextResponse.json({ success: true, message: "ダミーデータの生成が完了しました。" });
+      }
+
+      case "resetDatabase": {
+        await sql`DELETE FROM ticket_submissions`;
+        await sql`DELETE FROM ticket_machine_logs`;
+        await sql`DELETE FROM history`;
+        await sql`DELETE FROM used_hashes`;
+        await sql`DELETE FROM notification_reads`;
+        await sql`DELETE FROM notifications`;
+        await sql`DELETE FROM lottery_winners`;
+        await sql`DELETE FROM ticket_history`;
+        await sql`DELETE FROM users`;
+        await sql`DELETE FROM menu_items`;
+        return NextResponse.json({ success: true, message: "データベースを初期化しました。" });
       }
 
       case "verifyPassword": {

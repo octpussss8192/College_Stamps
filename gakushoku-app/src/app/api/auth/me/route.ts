@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const { rows } = await sql`SELECT id, nickname, stamps, tickets, created_at FROM users WHERE id = ${Number(sessionId)}`;
+    const { rows } = await sql`SELECT id, nickname, stamps, tickets, created_at FROM users WHERE id = ${Number(sessionId)} AND deleted_at IS NULL`;
     const user = rows[0];
 
     if (!user) {

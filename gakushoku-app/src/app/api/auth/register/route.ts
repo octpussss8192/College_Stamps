@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { sendVerificationEmail } from "@/lib/mail";
+import { sendVerificationEmail, isSmtpConfigured } from "@/lib/mail";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Check if user exists (nickname or email)
-    const existing = await sql`SELECT id, nickname, email FROM users WHERE nickname = ${nickname} OR email = ${email}`;
+    const existing = await sql`SELECT id, nickname, email FROM users WHERE (nickname = ${nickname} OR email = ${email}) AND deleted_at IS NULL`;
     if ((existing.rowCount ?? 0) > 0) {
       const existingUser = existing.rows[0];
       if (existingUser.nickname === nickname) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const responsePayload: any = { success: true, userId, nickname, email };
     
     // In dev mode, return the verification code to easily debug/test
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' && !isSmtpConfigured()) {
       responsePayload.devCode = verificationCode;
     }
 

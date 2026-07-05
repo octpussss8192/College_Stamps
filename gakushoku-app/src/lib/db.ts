@@ -131,7 +131,8 @@ export async function initDb() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(6)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires TIMESTAMP WITH TIME ZONE`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_code VARCHAR(6)`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_code_expires TIMESTAMP WITH TIME ZONE`
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_code_expires TIMESTAMP WITH TIME ZONE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE`
     ];
 
     for (const m of migrations) {
