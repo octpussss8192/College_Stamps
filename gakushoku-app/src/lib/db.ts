@@ -1,7 +1,13 @@
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 
+let connectionString = process.env.POSTGRES_URL;
+if (connectionString) {
+  // pgライブラリがSSL設定を上書きするのを防ぐため、接続文字列から sslmode を削除します
+  connectionString = connectionString.replace(/[?&]sslmode=[^&]+/g, '');
+}
+
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
+  connectionString,
   ssl: {
     rejectUnauthorized: false
   }
