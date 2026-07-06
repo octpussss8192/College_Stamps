@@ -2,8 +2,14 @@ import { Pool, QueryResult, QueryResultRow } from 'pg';
 
 let connectionString = process.env.POSTGRES_URL;
 if (connectionString) {
-  // pgライブラリがSSL設定を上書きするのを防ぐため、接続文字列から sslmode を削除します
-  connectionString = connectionString.replace(/[?&]sslmode=[^&]+/g, '');
+  try {
+    // pgライブラリがSSL設定を上書きするのを防ぐため、URLオブジェクトを使用して安全に sslmode パラメータを削除します
+    const parsedUrl = new URL(connectionString);
+    parsedUrl.searchParams.delete('sslmode');
+    connectionString = parsedUrl.toString();
+  } catch (e) {
+    console.error("Failed to parse POSTGRES_URL:", e);
+  }
 }
 
 const pool = new Pool({
