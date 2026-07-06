@@ -18,6 +18,8 @@ export async function sendEmail({ to, subject, text, html }: SendMailOptions) {
   const pass = process.env.SMTP_PASS;
   const from = process.env.SMTP_FROM || '"学食スタンプ" <no-reply@gakushoku-stamp.local>';
 
+  const isProd = process.env.NODE_ENV === 'production';
+
   // Check if SMTP is configured
   if (isSmtpConfigured()) {
     try {
@@ -43,8 +45,14 @@ export async function sendEmail({ to, subject, text, html }: SendMailOptions) {
       return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error(`Failed to send real email via SMTP to ${to}:`, error);
-      // Fallback to mock log in case SMTP fails
+      throw new Error(`メールの送信に失敗しました: ${(error as Error).message}`);
     }
+  }
+
+  // If in production but SMTP is not configured, throw an error
+  if (isProd) {
+    console.error("SMTP is not configured in production environment.");
+    throw new Error("メール送信設定が不足しているため、メールを送信できませんでした。管理者に連絡してください。");
   }
 
   // Fallback / Development Mock Email Log
